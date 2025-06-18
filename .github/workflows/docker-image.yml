@@ -73,7 +73,7 @@ jobs:
           printf '%s\n' "${IMAGES[@]}"
           
           case "${{ github.ref }}" in
-            "refs/heads/main" | "refs/tags/"*)
+            "refs/heads/prod" | "refs/tags/"*)
               WEBHOOK_URL="${{ secrets.WEBHOOK_DEPLOY_MAIN }}"
               ;;
             "refs/heads/homolog")
