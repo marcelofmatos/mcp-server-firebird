@@ -1,0 +1,57 @@
+name: Docker set tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseTag:
+        description: "release tag"
+        required: true
+      dockerTag:
+        description: "docker tag"
+        required: true
+
+jobs:
+  set-docker-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Convert repository and tag name to lowercase
+        id: lowercase_names
+        run: |
+          echo "repository_name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Set IMAGE_NAME
+        run: | 
+          echo "IMAGE_NAME=ghcr.io/${{ env.repository_name }}:${{ inputs.dockerTag }}" >> $GITHUB_ENV
+          echo "IMAGE_NAME_INPUT_TAG=ghcr.io/${{ env.repository_name }}:${{ inputs.releaseTag }}" >> $GITHUB_ENV
+
+      - name: Associa a docker tag com a release tag
+        run: |
+          echo "A tag ${{ inputs.dockerTag }} será apontada para a release ${{ inputs.releaseTag }}"
+          docker pull ${{ env.IMAGE_NAME_INPUT_TAG }}
+          docker tag ${{ env.IMAGE_NAME_INPUT_TAG }} ${{ env.IMAGE_NAME }}
+          docker push ${{ env.IMAGE_NAME }}
+
+      - name: Deploy Services
+        shell: bash
+        run: |
+            echo "IMAGE_NAME=${{ env.IMAGE_NAME }}"
+            echo "Deploying to ${{ github.ref }}..."
+            case "${{ github.ref }}" in
+              "refs/heads/main" | "refs/heads/master")
+                WEBHOOK_URL=${{ secrets.WEBHOOK_DEPLOY_MAIN }}
+                ;;
+              "refs/heads/homolog")
+                WEBHOOK_URL=${{ secrets.WEBHOOK_DEPLOY_HOMOLOG }}
+                ;;
+              *)
+                echo "No deployment for branch ${{ github.ref }}"
+                exit 0
+                ;;
+            esac
+            echo "Webhook URL: ${WEBHOOK_URL}"
+            curl --silent --fail -X POST ${WEBHOOK_URL} -H "Content-Type: application/json" -d "{\"image_name\": \"${{ env.IMAGE_NAME }}\"}"
+

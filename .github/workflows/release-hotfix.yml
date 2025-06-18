@@ -1,0 +1,188 @@
+name: Auto Version on bugfix PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-version:
+    runs-on: ubuntu-latest
+    
+    # Só executa se o PR foi merged E tem label de urgência/bugfix
+    if: |
+      github.event.pull_request.merged == true &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'urgent') ||
+        contains(github.event.pull_request.labels.*.name, 'bug') ||
+        contains(github.event.pull_request.labels.*.name, 'bugfix') ||
+        contains(github.event.pull_request.labels.*.name, 'hotfix')
+      )
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          # Usar autor do PR, com fallback para GitHub Action
+          if [ "${{ github.event.pull_request.user.email }}" != "" ]; then
+            git config --local user.email "${{ github.event.pull_request.user.email }}"
+            git config --local user.name "${{ github.event.pull_request.user.login }}"
+          else
+            git config --local user.email "${{ github.actor }}@users.noreply.github.com"  
+            git config --local user.name "${{ github.actor }}"
+          fi
+
+      - name: Get latest version
+        id: get_version
+        shell: bash
+        run: |
+          git fetch --tags
+          
+          # Get all tags and filter semantic versions using simple approach
+          LATEST_TAG=""
+          for tag in $(git tag -l); do
+            if [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              LATEST_TAG="$tag"
+            fi
+          done
+          
+          # If we found semantic tags, get the highest one
+          if [ -n "$LATEST_TAG" ]; then
+            LATEST_TAG=$(git tag -l | grep -v "[a-zA-Z]" | sort -V | tail -1)
+          fi
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No previous tags found, starting with 1.0.0"
+            NEW_VERSION="1.0.0"
+            LATEST_TAG="none"
+          else
+            echo "Latest tag found: $LATEST_TAG"
+            
+            MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+            MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+            PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+            
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          fi
+          
+          echo "New version will be: $NEW_VERSION"
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        shell: bash
+        run: |
+          NEW_TAG="${{ steps.get_version.outputs.new_tag }}"
+          echo "Creating tag: $NEW_TAG"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - name: Generate changelog
+        id: generate_changelog
+        shell: bash
+        run: |
+          LATEST_TAG="${{ steps.get_version.outputs.latest_tag }}"
+          
+          if [ "$LATEST_TAG" = "none" ]; then
+            echo "First release - using initial message"
+            CHANGES="- Initial release"
+          else
+            echo "Getting changes since $LATEST_TAG"
+            CHANGES=$(git log "$LATEST_TAG"..HEAD --oneline --no-merges | head -10 | sed 's/^/- /')
+            
+            if [ -z "$CHANGES" ]; then
+              CHANGES="- Minor updates and improvements"
+            fi
+          fi
+          
+          {
+            echo "changes<<EOF"
+            echo "$CHANGES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.new_version }}"
+          CHANGES="${{ steps.generate_changelog.outputs.changes }}"
+          LATEST_TAG="${{ steps.get_version.outputs.latest_tag }}"
+          
+          RELEASE_NOTES="## $NEW_VERSION
+          
+          ### 🚨 Emergency Release
+          
+          $CHANGES
+          
+          ### 📊 Release Info
+          - **Type**: Emergency patch release
+          - **Previous Version**: $LATEST_TAG
+          - **Triggered by**: Bugfix PR merge
+          - **Released by**: @${{ github.actor }}"
+          
+          if [ "$LATEST_TAG" != "none" ]; then
+            RELEASE_NOTES="$RELEASE_NOTES
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/$LATEST_TAG...$NEW_VERSION"
+          fi
+          
+          gh release create "$NEW_VERSION" \
+            --title "$NEW_VERSION" \
+            --notes "$RELEASE_NOTES"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update package.json version
+        shell: bash
+        run: |
+          if [ -f "package.json" ]; then
+            VERSION="${{ steps.get_version.outputs.new_version }}"
+            echo "Updating package.json to version $VERSION"
+            
+            npm version "$VERSION" --no-git-tag-version --allow-same-version
+            
+            git add package.json
+            if [ -f "package-lock.json" ]; then
+              git add package-lock.json
+            fi
+            
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "chore: bump version to $VERSION"
+              git push origin main
+            fi
+          else
+            echo "No package.json found, skipping version update"
+          fi
+
+      - name: Summary
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.get_version.outputs.new_version }}"
+          LATEST_TAG="${{ steps.get_version.outputs.latest_tag }}"
+          CHANGES="${{ steps.generate_changelog.outputs.changes }}"
+          
+          {
+            echo "## 🚨 Emergency Release Created!"
+            echo ""
+            echo "**Version:** $NEW_VERSION"
+            echo "**Previous:** $LATEST_TAG"
+            echo "**Reason:** Urgent/Bugfix PR merged"
+            echo ""
+            echo "### Changes:"
+            echo "$CHANGES"
+          } >> $GITHUB_STEP_SUMMARY
