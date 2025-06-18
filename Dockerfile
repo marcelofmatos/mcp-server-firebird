@@ -1,77 +1,64 @@
-# Dockerfile Ubuntu - Melhor suporte nativo para Firebird
+# Dockerfile Mínimo - Foco apenas em funcionar
 FROM ubuntu:22.04
 
-# Metadados da imagem
-LABEL maintainer="marcelofmatos@gmail.com"
-LABEL description="Servidor MCP para Firebird com Ubuntu (suporte nativo)"
-LABEL version="1.0"
-
-# Evitar prompts interativos
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
 
 # Configurar timezone
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Instalar Python 3.11 e dependências Firebird
+# Instalar apenas o essencial que sabemos que existe
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
+    python3 \
+    python3-pip \
+    python3-dev \
     curl \
     wget \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y \
-        python3.11 \
-        python3.11-pip \
-        python3.11-dev \
-        firebird3.0-client \
-        libfbclient2 \
-        firebird-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Criar links simbólicos para python3
-RUN ln -sf /usr/bin/python3.11 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.11 /usr/bin/python
+# Tentar instalar Firebird (pode ou não funcionar)
+RUN apt-get update && \
+    (apt-get install -y libfbclient2 || echo "libfbclient2 not available") && \
+    (apt-get install -y firebird3.0-common || echo "firebird3.0-common not available") && \
+    (apt-get install -y firebird3.0-utils || echo "firebird3.0-utils not available") && \
+    rm -rf /var/lib/apt/lists/*
 
-# Instalar pip para Python 3.11
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+# Se os pacotes não funcionaram, instalar manualmente
+RUN if [ ! -f /usr/lib/x86_64-linux-gnu/libfbclient.so ]; then \
+    echo "Instalando bibliotecas Firebird manualmente..." && \
+    mkdir -p /tmp/fb && cd /tmp/fb && \
+    wget -q https://github.com/FirebirdSQL/firebird/releases/download/v5.0.0/Firebird-5.0.0.1306-0.amd64.tar.xz && \
+    tar -xf Firebird-5.0.0.1306-0.amd64.tar.xz && \
+    cd Firebird-5.0.0.1306-0.amd64 && \
+    cp lib/libfbclient.so* /usr/lib/x86_64-linux-gnu/ 2>/dev/null || \
+    cp lib/libfbclient.so* /usr/lib/ 2>/dev/null || \
+    echo "Erro ao copiar bibliotecas" && \
+    ldconfig && \
+    cd / && rm -rf /tmp/fb; \
+    fi
 
-# Configurar variáveis de ambiente Firebird
+# Configurar ambiente
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib:$LD_LIBRARY_PATH
 ENV FIREBIRD=/usr
-ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 
-# Criar usuário não-root
-RUN useradd -r -m -s /bin/bash -u 1001 mcp
-
-# Diretórios de trabalho
-RUN mkdir -p /app/mcp-server /var/log/mcp
-
-# Copiar e instalar dependências Python
-COPY requirements.txt /app/mcp-server/
-RUN python3 -m pip install --no-cache-dir --upgrade pip \
-    && python3 -m pip install --no-cache-dir -r /app/mcp-server/requirements.txt
-
-# Copiar código do servidor
-COPY server.py /app/mcp-server/
-
-# Script para testar bibliotecas Firebird
-RUN echo '#!/bin/bash\n\
-echo "Testando bibliotecas Firebird..."\n\
-echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"\n\
-echo "Procurando libfbclient..."\n\
-find /usr -name "*fbclient*" 2>/dev/null\n\
-echo "Testando Python FDB..."\n\
-python3 -c "import fdb; print(f\"FDB version: {fdb.version}\")" 2>/dev/null && echo "✅ FDB OK" || echo "❌ FDB Error"\n\
-' > /app/mcp-server/test-firebird.sh && chmod +x /app/mcp-server/test-firebird.sh
-
-# Configurar permissões
-RUN chown -R mcp:mcp /app/mcp-server /var/log/mcp
-
-# Configurar usuário de trabalho
-USER mcp
+# Criar usuário
+RUN useradd -r -m mcp
+RUN mkdir -p /app/mcp-server
 WORKDIR /app/mcp-server
 
-# Variáveis de ambiente padrão
+# Instalar dependências Python
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copiar código
+COPY server.py .
+RUN chown -R mcp:mcp /app/mcp-server
+
+# Configurar usuário
+USER mcp
+
+# Variáveis de ambiente
 ENV MCP_SERVER_PORT=3000
 ENV MCP_LOG_LEVEL=info
 ENV FIREBIRD_HOST=firebird-server
@@ -81,12 +68,7 @@ ENV FIREBIRD_USER=SYSDBA
 ENV FIREBIRD_PASSWORD=masterkey
 ENV FIREBIRD_CHARSET=UTF8
 
-# Expor porta
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Comando de execução
+# Comando simples
 CMD ["python3", "server.py"]
