@@ -1,0 +1,25 @@
+{
+    "name": "mcp-firebird-server",
+    "version": "1.0.0",
+    "description": "Servidor MCP para Firebird 5.0",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "test": "echo \"No tests specified\" && exit 0"
+    },
+    "keywords": [
+      "mcp",
+      "firebird",
+      "database",
+      "ai",
+      "model-context-protocol"
+    ],
+    "author": "Seu Nome",
+    "license": "MIT",
+    "dependencies": {},
+    "devDependencies": {},
+    "engines": {
+      "node": ">=18.0.0",
+      "npm": ">=8.0.0"
+    }
+  }

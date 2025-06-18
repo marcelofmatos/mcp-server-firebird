@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Servidor MCP que conecta a banco externo
+  mcp-server:
+    build: .
+    container_name: mcp-firebird-server
+    ports:
+      - "3000:3000"  # Porta do servidor MCP
+    environment:
+      # Configurações do banco Firebird EXTERNO
+      - FIREBIRD_HOST=seu-servidor-firebird.com  # Altere para seu servidor
+      - FIREBIRD_PORT=3050
+      - FIREBIRD_DATABASE=/caminho/para/seu/banco.fdb  # Altere para seu banco
+      - FIREBIRD_USER=SYSDBA
+      - FIREBIRD_PASSWORD=sua_senha_aqui  # Altere para sua senha
+      - FIREBIRD_CHARSET=UTF8
+      
+      # Configurações do MCP Server
+      - MCP_SERVER_PORT=3000
+      - MCP_LOG_LEVEL=info
+      
+      # Timezone
+      - TZ=America/Sao_Paulo
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Opcional: se precisar de volumes para logs ou configs
+    volumes:
+      - ./logs:/var/log/mcp
+
+  # Exemplo de como usar um Firebird local para testes (opcional)
+  firebird-local:
+    image: jacobalberty/firebird:v4.0
+    container_name: firebird-test
+    environment:
+      - FIREBIRD_DATABASE=testdb.fdb
+      - FIREBIRD_USER=SYSDBA
+      - FIREBIRD_PASSWORD=masterkey
+      - ISC_PASSWORD=masterkey
+    ports:
+      - "3050:3050"
+    volumes:
+      - firebird_data:/firebird/data
+      - firebird_logs:/firebird/log
+    profiles:
+      - testing  # Ativar apenas para testes: docker-compose --profile testing up
+
+volumes:
+  firebird_data:
+    driver: local
+  firebird_logs:
+    driver: local
+
+networks:
+  default:
+    name: mcp-network
