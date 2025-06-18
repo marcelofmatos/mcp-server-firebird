@@ -8,6 +8,7 @@ import json
 import sys
 import os
 import logging
+import ctypes.util
 from typing import Dict, List, Any, Optional
 
 # Configurar logging básico
@@ -18,14 +19,28 @@ def log(message: str):
     """Log simples para stderr"""
     print(f"[MCP-FIREBIRD] {message}", file=sys.stderr, flush=True)
 
-# Importar FDB
+# Importar FDB com diagnóstico detalhado
 try:
     import fdb
-    log("FDB library loaded successfully")
+    log("✅ FDB library loaded successfully")
+    log(f"FDB version: {fdb.__version__}")
 except ImportError as e:
-    log(f"ERROR: Could not import fdb: {e}")
-    log("Install Firebird client libraries: apt-get install firebird3.0-client libfbclient2")
+    log(f"❌ ERROR: Could not import fdb: {e}")
+    log("Install Firebird client libraries or check LD_LIBRARY_PATH")
     sys.exit(1)
+
+# Verificar se consegue localizar as bibliotecas cliente
+try:
+    # Tentar localizar explicitamente a biblioteca
+    import ctypes.util
+    fbclient_path = ctypes.util.find_library('fbclient')
+    if fbclient_path:
+        log(f"✅ Firebird client library found at: {fbclient_path}")
+    else:
+        log("⚠️  Warning: libfbclient not found in system library path")
+        log("LD_LIBRARY_PATH: " + os.getenv('LD_LIBRARY_PATH', 'not set'))
+except Exception as e:
+    log(f"Library check failed: {e}")
 
 # Configuração do banco externo
 DB_CONFIG = {
@@ -47,6 +62,7 @@ class FirebirdMCPServer:
     def test_connection(self):
         """Testar conexão com Firebird externo"""
         try:
+            log(f"Attempting connection to: {self.dsn}")
             conn = fdb.connect(
                 dsn=self.dsn,
                 user=DB_CONFIG['user'],
@@ -57,9 +73,24 @@ class FirebirdMCPServer:
             cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
             version = cursor.fetchone()[0]
             conn.close()
+            log("✅ Connection successful!")
             return {"connected": True, "version": version.strip()}
         except Exception as e:
-            return {"connected": False, "error": str(e)}
+            log(f"❌ Connection failed: {e}")
+            error_msg = str(e)
+            
+            # Diagnóstico específico para problemas comuns
+            if "could not be determined" in error_msg.lower():
+                error_msg += "\n\nDiagnostic: Firebird client libraries not found. Check:\n"
+                error_msg += "- LD_LIBRARY_PATH includes Firebird lib directory\n"
+                error_msg += "- libfbclient.so is installed and accessible\n"
+                error_msg += f"- Current LD_LIBRARY_PATH: {os.getenv('LD_LIBRARY_PATH', 'not set')}"
+            elif "network error" in error_msg.lower() or "connection refused" in error_msg.lower():
+                error_msg += f"\n\nDiagnostic: Network connectivity issue to {DB_CONFIG['host']}:{DB_CONFIG['port']}"
+            elif "login" in error_msg.lower() or "password" in error_msg.lower():
+                error_msg += "\n\nDiagnostic: Authentication failed. Check username/password."
+            
+            return {"connected": False, "error": error_msg}
     
     def execute_query(self, sql: str, params: Optional[List] = None):
         """Executar query SQL"""
