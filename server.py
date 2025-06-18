@@ -2,17 +2,20 @@
 """
 Servidor MCP para Firebird Externo
 Permite que modelos de IA interajam com banco de dados Firebird externo
+Usando biblioteca FDB (mais estável)
 """
 
 import os
 import asyncio
 import logging
 from typing import Dict, List, Any, Optional
-import firebird.driver as fb_driver
+import fdb
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 import uvicorn
 from contextlib import asynccontextmanager
+import datetime
+import decimal
 
 # Configuração de logging
 logging.basicConfig(
@@ -59,33 +62,59 @@ class ConnectionStatus(BaseModel):
     database: Optional[str] = None
     error: Optional[str] = None
 
+def serialize_value(value):
+    """Serializar valores para JSON"""
+    if value is None:
+        return None
+    elif isinstance(value, (datetime.datetime, datetime.date)):
+        return value.isoformat()
+    elif isinstance(value, datetime.time):
+        return value.strftime('%H:%M:%S')
+    elif isinstance(value, decimal.Decimal):
+        return float(value)
+    elif isinstance(value, bytes):
+        try:
+            return value.decode('utf-8')
+        except:
+            return f"<BLOB: {len(value)} bytes>"
+    else:
+        return value
+
 class MCPFirebirdServer:
     def __init__(self):
-        self.connection_string = self._build_connection_string()
+        self.dsn = self._build_dsn()
         logger.info(f"Configurado para conectar em: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
         
-    def _build_connection_string(self) -> str:
-        """Construir string de conexão para Firebird"""
-        return f"{DB_CONFIG['host']}/{DB_CONFIG['port']}:{DB_CONFIG['database']}"
+    def _build_dsn(self) -> str:
+        """Construir DSN para Firebird usando FDB"""
+        if DB_CONFIG['host'].lower() in ['localhost', '127.0.0.1']:
+            # Conexão local
+            return f"{DB_CONFIG['host']}/{DB_CONFIG['port']}:{DB_CONFIG['database']}"
+        else:
+            # Conexão remota
+            return f"{DB_CONFIG['host']}/{DB_CONFIG['port']}:{DB_CONFIG['database']}"
     
     async def test_connection(self) -> ConnectionStatus:
         """Testar conexão com o banco Firebird"""
         try:
-            with fb_driver.connect(
-                self.connection_string,
+            conn = fdb.connect(
+                dsn=self.dsn,
                 user=DB_CONFIG['user'],
                 password=DB_CONFIG['password'],
                 charset=DB_CONFIG['charset']
-            ) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
-                version = cursor.fetchone()[0]
-                
-                return ConnectionStatus(
-                    connected=True,
-                    server_version=version,
-                    database=DB_CONFIG['database']
-                )
+            )
+            
+            cursor = conn.cursor()
+            cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
+            version = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            return ConnectionStatus(
+                connected=True,
+                server_version=version.strip() if version else 'Unknown',
+                database=DB_CONFIG['database']
+            )
                 
         except Exception as e:
             logger.error(f"Erro ao testar conexão: {e}")
@@ -99,96 +128,104 @@ class MCPFirebirdServer:
         import time
         start_time = time.time()
         
+        conn = None
         try:
-            with fb_driver.connect(
-                self.connection_string,
+            conn = fdb.connect(
+                dsn=self.dsn,
                 user=DB_CONFIG['user'],
                 password=DB_CONFIG['password'],
                 charset=DB_CONFIG['charset']
-            ) as conn:
-                cursor = conn.cursor()
+            )
+            
+            cursor = conn.cursor()
+            
+            if params:
+                cursor.execute(sql, params)
+            else:
+                cursor.execute(sql)
+            
+            execution_time = time.time() - start_time
+            
+            # Verificar se é SELECT
+            sql_upper = sql.strip().upper()
+            if sql_upper.startswith('SELECT') or sql_upper.startswith('WITH'):
+                columns = [desc[0] for desc in cursor.description] if cursor.description else []
+                rows = cursor.fetchall()
                 
-                if params:
-                    cursor.execute(sql, params)
-                else:
-                    cursor.execute(sql)
+                # Converter dados para formato JSON-serializável
+                data = []
+                for row in rows:
+                    row_dict = {}
+                    for i, value in enumerate(row):
+                        row_dict[columns[i]] = serialize_value(value)
+                    data.append(row_dict)
                 
-                execution_time = time.time() - start_time
+                return QueryResponse(
+                    success=True,
+                    data=data,
+                    execution_time=round(execution_time, 4)
+                )
+            else:
+                # Para INSERT, UPDATE, DELETE
+                affected_rows = cursor.rowcount if hasattr(cursor, 'rowcount') else 0
+                conn.commit()
                 
-                # Verificar se é SELECT
-                sql_upper = sql.strip().upper()
-                if sql_upper.startswith('SELECT') or sql_upper.startswith('WITH'):
-                    columns = [desc[0] for desc in cursor.description] if cursor.description else []
-                    rows = cursor.fetchall()
-                    
-                    # Converter dados para formato JSON-serializável
-                    data = []
-                    for row in rows:
-                        row_dict = {}
-                        for i, value in enumerate(row):
-                            # Tratar tipos especiais do Firebird
-                            if hasattr(value, 'isoformat'):  # datetime objects
-                                row_dict[columns[i]] = value.isoformat()
-                            elif isinstance(value, bytes):  # BLOB data
-                                try:
-                                    row_dict[columns[i]] = value.decode('utf-8')
-                                except:
-                                    row_dict[columns[i]] = f"<BLOB: {len(value)} bytes>"
-                            else:
-                                row_dict[columns[i]] = value
-                        data.append(row_dict)
-                    
-                    return QueryResponse(
-                        success=True,
-                        data=data,
-                        execution_time=round(execution_time, 4)
-                    )
-                else:
-                    # Para INSERT, UPDATE, DELETE
-                    affected_rows = cursor.rowcount if hasattr(cursor, 'rowcount') else 0
-                    conn.commit()
-                    
-                    return QueryResponse(
-                        success=True,
-                        affected_rows=affected_rows,
-                        execution_time=round(execution_time, 4)
-                    )
+                return QueryResponse(
+                    success=True,
+                    affected_rows=affected_rows,
+                    execution_time=round(execution_time, 4)
+                )
                     
         except Exception as e:
             execution_time = time.time() - start_time
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
             logger.error(f"Erro ao executar query: {e}")
             return QueryResponse(
                 success=False,
                 error=str(e),
                 execution_time=round(execution_time, 4)
             )
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
     
     async def get_database_info(self) -> DatabaseInfo:
         """Obter informações do banco de dados"""
+        conn = None
         try:
-            with fb_driver.connect(
-                self.connection_string,
+            conn = fdb.connect(
+                dsn=self.dsn,
                 user=DB_CONFIG['user'],
                 password=DB_CONFIG['password'],
                 charset=DB_CONFIG['charset']
-            ) as conn:
-                cursor = conn.cursor()
-                
-                # Obter lista de tabelas
-                cursor.execute("""
-                    SELECT TRIM(RDB$RELATION_NAME) as TABLE_NAME
-                    FROM RDB$RELATIONS 
-                    WHERE RDB$VIEW_BLR IS NULL 
-                    AND (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)
-                    ORDER BY RDB$RELATION_NAME
-                """)
-                tables = [row[0] for row in cursor.fetchall()]
-                
-                # Obter versão do Firebird
-                cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
-                version = cursor.fetchone()[0]
-                
-                # Informações adicionais do servidor
+            )
+            
+            cursor = conn.cursor()
+            
+            # Obter lista de tabelas
+            cursor.execute("""
+                SELECT TRIM(RDB$RELATION_NAME) as TABLE_NAME
+                FROM RDB$RELATIONS 
+                WHERE RDB$VIEW_BLR IS NULL 
+                AND (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)
+                ORDER BY RDB$RELATION_NAME
+            """)
+            tables = [row[0] for row in cursor.fetchall()]
+            
+            # Obter versão do Firebird
+            cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
+            version_row = cursor.fetchone()
+            version = version_row[0].strip() if version_row and version_row[0] else 'Unknown'
+            
+            # Informações adicionais do servidor
+            try:
                 cursor.execute("""
                     SELECT 
                         RDB$GET_CONTEXT('SYSTEM', 'DB_NAME') as DB_NAME,
@@ -198,88 +235,109 @@ class MCPFirebirdServer:
                 """)
                 server_row = cursor.fetchone()
                 server_info = {
-                    'database_name': server_row[0],
-                    'protocol': server_row[1],
-                    'client_address': server_row[2],
+                    'database_name': server_row[0] if server_row[0] else 'Unknown',
+                    'protocol': server_row[1] if server_row[1] else 'Unknown',
+                    'client_address': server_row[2] if server_row[2] else 'Unknown',
                     'tables_count': len(tables)
                 }
-                
-                return DatabaseInfo(
-                    tables=tables,
-                    version=version,
-                    database_path=DB_CONFIG['database'],
-                    server_info=server_info
-                )
+            except:
+                server_info = {
+                    'database_name': 'Unknown',
+                    'protocol': 'Unknown',
+                    'client_address': 'Unknown',
+                    'tables_count': len(tables)
+                }
+            
+            return DatabaseInfo(
+                tables=tables,
+                version=version,
+                database_path=DB_CONFIG['database'],
+                server_info=server_info
+            )
                 
         except Exception as e:
             logger.error(f"Erro ao obter informações do banco: {e}")
             raise HTTPException(status_code=500, detail=f"Erro ao conectar com banco: {str(e)}")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
 
     async def get_table_schema(self, table_name: str) -> TableSchema:
         """Obter schema detalhado de uma tabela"""
+        conn = None
         try:
-            with fb_driver.connect(
-                self.connection_string,
+            conn = fdb.connect(
+                dsn=self.dsn,
                 user=DB_CONFIG['user'],
                 password=DB_CONFIG['password'],
                 charset=DB_CONFIG['charset']
-            ) as conn:
-                cursor = conn.cursor()
-                
-                sql = """
-                SELECT 
-                    TRIM(rf.RDB$FIELD_NAME) as FIELD_NAME,
-                    CASE f.RDB$FIELD_TYPE
-                        WHEN 261 THEN 'BLOB'
-                        WHEN 14 THEN 'CHAR'
-                        WHEN 40 THEN 'CSTRING'
-                        WHEN 11 THEN 'D_FLOAT'
-                        WHEN 27 THEN 'DOUBLE'
-                        WHEN 10 THEN 'FLOAT'
-                        WHEN 16 THEN 'BIGINT'
-                        WHEN 8 THEN 'INTEGER'
-                        WHEN 9 THEN 'QUAD'
-                        WHEN 7 THEN 'SMALLINT'
-                        WHEN 12 THEN 'DATE'
-                        WHEN 13 THEN 'TIME'
-                        WHEN 35 THEN 'TIMESTAMP'
-                        WHEN 37 THEN 'VARCHAR'
-                        ELSE 'UNKNOWN'
-                    END as DATA_TYPE,
-                    f.RDB$FIELD_LENGTH as FIELD_LENGTH,
-                    f.RDB$FIELD_SCALE as FIELD_SCALE,
-                    rf.RDB$NULL_FLAG as NOT_NULL,
-                    rf.RDB$DEFAULT_SOURCE as DEFAULT_VALUE,
-                    rf.RDB$FIELD_POSITION as POSITION
-                FROM RDB$RELATION_FIELDS rf
-                JOIN RDB$FIELDS f ON rf.RDB$FIELD_SOURCE = f.RDB$FIELD_NAME
-                WHERE rf.RDB$RELATION_NAME = ?
-                ORDER BY rf.RDB$FIELD_POSITION
-                """
-                
-                cursor.execute(sql, [table_name.upper()])
-                fields = []
-                
-                for row in cursor.fetchall():
-                    field_info = {
-                        'name': row[0],
-                        'type': row[1],
-                        'length': row[2],
-                        'scale': row[3],
-                        'not_null': bool(row[4]),
-                        'default': row[5].strip() if row[5] else None,
-                        'position': row[6]
-                    }
-                    fields.append(field_info)
-                
-                return TableSchema(
-                    table_name=table_name,
-                    fields=fields
-                )
+            )
+            
+            cursor = conn.cursor()
+            
+            sql = """
+            SELECT 
+                TRIM(rf.RDB$FIELD_NAME) as FIELD_NAME,
+                CASE f.RDB$FIELD_TYPE
+                    WHEN 261 THEN 'BLOB'
+                    WHEN 14 THEN 'CHAR'
+                    WHEN 40 THEN 'CSTRING'
+                    WHEN 11 THEN 'D_FLOAT'
+                    WHEN 27 THEN 'DOUBLE'
+                    WHEN 10 THEN 'FLOAT'
+                    WHEN 16 THEN 'BIGINT'
+                    WHEN 8 THEN 'INTEGER'
+                    WHEN 9 THEN 'QUAD'
+                    WHEN 7 THEN 'SMALLINT'
+                    WHEN 12 THEN 'DATE'
+                    WHEN 13 THEN 'TIME'
+                    WHEN 35 THEN 'TIMESTAMP'
+                    WHEN 37 THEN 'VARCHAR'
+                    ELSE 'UNKNOWN'
+                END as DATA_TYPE,
+                f.RDB$FIELD_LENGTH as FIELD_LENGTH,
+                f.RDB$FIELD_SCALE as FIELD_SCALE,
+                rf.RDB$NULL_FLAG as NOT_NULL,
+                rf.RDB$DEFAULT_SOURCE as DEFAULT_VALUE,
+                rf.RDB$FIELD_POSITION as POSITION
+            FROM RDB$RELATION_FIELDS rf
+            JOIN RDB$FIELDS f ON rf.RDB$FIELD_SOURCE = f.RDB$FIELD_NAME
+            WHERE rf.RDB$RELATION_NAME = ?
+            ORDER BY rf.RDB$FIELD_POSITION
+            """
+            
+            cursor.execute(sql, [table_name.upper()])
+            fields = []
+            
+            for row in cursor.fetchall():
+                field_info = {
+                    'name': row[0],
+                    'type': row[1],
+                    'length': row[2],
+                    'scale': row[3],
+                    'not_null': bool(row[4]),
+                    'default': row[5].strip() if row[5] else None,
+                    'position': row[6]
+                }
+                fields.append(field_info)
+            
+            return TableSchema(
+                table_name=table_name,
+                fields=fields
+            )
                 
         except Exception as e:
             logger.error(f"Erro ao obter schema da tabela {table_name}: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
 
 # Instância do servidor MCP
 mcp_server = MCPFirebirdServer()

@@ -10,13 +10,9 @@ LABEL version="1.0"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo
 
-# Instalar dependências do sistema necessárias para firebird-driver
+# Instalar dependências do sistema necessárias para FDB
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
-    gcc \
-    libc6-dev \
-    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Criar usuário não-root para o servidor MCP
