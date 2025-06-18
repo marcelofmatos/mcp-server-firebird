@@ -1,43 +1,35 @@
 #!/usr/bin/env python3
 """
-Servidor MCP para Firebird - Versão Ultra-Rápida
-Otimizado para inicialização instantânea e sem timeouts
+Servidor MCP Nativo para Firebird
+Implementa o protocolo MCP correto (JSON-RPC over stdio)
 """
 
-import os
+import json
 import sys
+import os
+import asyncio
 import logging
 from typing import Dict, List, Any, Optional
 
-# Configuração de logging otimizada
-logging.basicConfig(level=logging.WARNING)  # Reduzir logs desnecessários
+# Configurar logging
+logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
-def stderr_log(message: str):
-    """Log crítico para stderr - aparece no Claude Desktop"""
-    print(f"[MCP] {message}", file=sys.stderr, flush=True)
+def log_stderr(message: str):
+    """Log para stderr - aparece no Claude Desktop"""
+    print(f"[MCP-FIREBIRD] {message}", file=sys.stderr, flush=True)
 
-# Importações críticas primeiro
-stderr_log("Starting MCP Firebird Server...")
+log_stderr("Starting MCP Firebird Server...")
 
+# Importar FDB
 try:
     import fdb
-    stderr_log("FDB imported successfully")
+    log_stderr("FDB library loaded successfully")
 except Exception as e:
-    stderr_log(f"FDB import failed: {e}")
+    log_stderr(f"ERROR: Failed to import FDB: {e}")
     sys.exit(1)
 
-# Importações FastAPI depois (pode causar delay)
-try:
-    from fastapi import FastAPI, HTTPException
-    from pydantic import BaseModel
-    import uvicorn
-    stderr_log("FastAPI imported successfully")
-except Exception as e:
-    stderr_log(f"FastAPI import failed: {e}")
-    sys.exit(1)
-
-# Configurações do banco (sem validação pesada)
+# Configuração do banco
 DB_CONFIG = {
     'host': os.getenv('FIREBIRD_HOST', 'localhost'),
     'port': int(os.getenv('FIREBIRD_PORT', 3050)),
@@ -47,26 +39,15 @@ DB_CONFIG = {
     'charset': os.getenv('FIREBIRD_CHARSET', 'UTF8')
 }
 
-stderr_log(f"Database configured: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
+log_stderr(f"Database config: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
 
-# Modelos mínimos
-class QueryRequest(BaseModel):
-    sql: str
-    params: Optional[List[Any]] = None
-
-class QueryResponse(BaseModel):
-    success: bool
-    data: Optional[List[Dict[str, Any]]] = None
-    error: Optional[str] = None
-
-# Servidor MCP simplificado
-class MCPFirebirdServer:
+class FirebirdMCPServer:
     def __init__(self):
         self.dsn = f"{DB_CONFIG['host']}/{DB_CONFIG['port']}:{DB_CONFIG['database']}"
-        stderr_log(f"DSN configured: {self.dsn}")
-    
+        log_stderr(f"DSN: {self.dsn}")
+        
     def test_connection(self):
-        """Teste de conexão síncrono e rápido"""
+        """Testar conexão com Firebird"""
         try:
             conn = fdb.connect(
                 dsn=self.dsn,
@@ -75,27 +56,17 @@ class MCPFirebirdServer:
                 charset=DB_CONFIG['charset']
             )
             cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM RDB$DATABASE")
-            cursor.fetchone()
+            cursor.execute("SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') FROM RDB$DATABASE")
+            version = cursor.fetchone()[0]
             conn.close()
-            stderr_log("Connection test: SUCCESS")
-            return {"status": "healthy", "database": "connected"}
+            log_stderr("Connection test: SUCCESS")
+            return {"connected": True, "version": version.strip()}
         except Exception as e:
-            error_msg = str(e)
-            stderr_log(f"Connection test: FAILED - {error_msg}")
-            
-            # Diagnóstico rápido
-            if "902" in error_msg or "shutdown" in error_msg.lower():
-                stderr_log("DIAGNOSIS: SQLCODE -902 - Check Firebird server and firewall")
-            elif "network" in error_msg.lower():
-                stderr_log("DIAGNOSIS: Network issue - Check host/port accessibility")
-            elif "login" in error_msg.lower():
-                stderr_log("DIAGNOSIS: Authentication - Check username/password")
-                
-            return {"status": "unhealthy", "error": error_msg}
+            log_stderr(f"Connection test: FAILED - {e}")
+            return {"connected": False, "error": str(e)}
     
-    def execute_query(self, sql: str, params: List[Any] = None):
-        """Execução de query simplificada"""
+    def execute_query(self, sql: str, params: Optional[List] = None):
+        """Executar query SQL"""
         try:
             conn = fdb.connect(
                 dsn=self.dsn,
@@ -110,27 +81,24 @@ class MCPFirebirdServer:
             else:
                 cursor.execute(sql)
             
-            # SELECT
             if sql.strip().upper().startswith('SELECT'):
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
                 rows = cursor.fetchall()
                 data = [dict(zip(columns, row)) for row in rows]
                 conn.close()
-                stderr_log(f"Query executed: {len(data)} rows")
-                return QueryResponse(success=True, data=data)
+                return {"success": True, "data": data}
             else:
-                # INSERT/UPDATE/DELETE
+                affected = cursor.rowcount
                 conn.commit()
                 conn.close()
-                stderr_log("Query executed: modification successful")
-                return QueryResponse(success=True)
+                return {"success": True, "affected_rows": affected}
                 
         except Exception as e:
-            stderr_log(f"Query failed: {e}")
-            return QueryResponse(success=False, error=str(e))
+            log_stderr(f"Query failed: {e}")
+            return {"success": False, "error": str(e)}
     
     def get_tables(self):
-        """Listar tabelas rapidamente"""
+        """Listar tabelas"""
         try:
             conn = fdb.connect(
                 dsn=self.dsn,
@@ -148,93 +116,243 @@ class MCPFirebirdServer:
             """)
             tables = [row[0] for row in cursor.fetchall()]
             conn.close()
-            stderr_log(f"Tables retrieved: {len(tables)}")
             return tables
         except Exception as e:
-            stderr_log(f"Get tables failed: {e}")
+            log_stderr(f"Get tables failed: {e}")
             return []
 
-# Criar instância
-mcp_server = MCPFirebirdServer()
+# Criar instância do servidor
+firebird_server = FirebirdMCPServer()
 
-# FastAPI app mínima
-app = FastAPI(
-    title="MCP Firebird",
-    description="Fast MCP Firebird Server",
-    version="1.0"
-)
-
-# Endpoints essenciais apenas
-@app.get("/health")
-def health_check():
-    """Health check rápido"""
-    stderr_log("Health check requested")
-    return mcp_server.test_connection()
-
-@app.post("/query")
-def execute_query(request: QueryRequest):
-    """Executar query"""
-    stderr_log(f"Query: {request.sql[:50]}...")
-    return mcp_server.execute_query(request.sql, request.params)
-
-@app.get("/tables")
-def list_tables():
-    """Listar tabelas"""
-    stderr_log("Tables requested")
-    return mcp_server.get_tables()
-
-@app.get("/info")
-def get_info():
-    """Informações básicas"""
-    stderr_log("Info requested")
-    tables = mcp_server.get_tables()
-    return {
-        "tables": tables,
-        "database_path": DB_CONFIG['database'],
-        "tables_count": len(tables)
-    }
-
-# Endpoint de diagnóstico
-@app.get("/diagnostics")
-def diagnostics():
-    """Diagnóstico mínimo"""
-    stderr_log("Diagnostics requested")
-    import glob
-    found_libs = []
-    for path in ['/usr/lib', '/usr/lib/x86_64-linux-gnu']:
-        if os.path.exists(path):
-            found_libs.extend(glob.glob(os.path.join(path, '*fbclient*')))
+class MCPServer:
+    def __init__(self):
+        self.capabilities = {
+            "tools": {}
+        }
+        log_stderr("MCP Server initialized")
     
-    return {
-        "database_config": {
-            "host": DB_CONFIG['host'],
-            "port": DB_CONFIG['port'],
-            "database": DB_CONFIG['database'],
-            "user": DB_CONFIG['user']
-        },
-        "firebird_libraries": found_libs,
-        "python_version": sys.version
-    }
+    def send_response(self, request_id: Any, result: Any):
+        """Enviar resposta JSON-RPC"""
+        response = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": result
+        }
+        print(json.dumps(response), flush=True)
+    
+    def send_error(self, request_id: Any, code: int, message: str):
+        """Enviar erro JSON-RPC"""
+        response = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {
+                "code": code,
+                "message": message
+            }
+        }
+        print(json.dumps(response), flush=True)
+    
+    def handle_initialize(self, request_id: Any, params: Dict):
+        """Responder ao initialize"""
+        log_stderr("Handling initialize request")
+        
+        result = {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {
+                    "listChanged": False
+                }
+            },
+            "serverInfo": {
+                "name": "firebird-mcp-server",
+                "version": "1.0.0"
+            }
+        }
+        
+        self.send_response(request_id, result)
+        log_stderr("Initialize response sent")
+    
+    def handle_tools_list(self, request_id: Any, params: Dict):
+        """Listar ferramentas disponíveis"""
+        log_stderr("Handling tools/list request")
+        
+        tools = [
+            {
+                "name": "test_connection",
+                "description": "Test connection to Firebird database",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "execute_query",
+                "description": "Execute SQL query on Firebird database",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "sql": {
+                            "type": "string",
+                            "description": "SQL query to execute"
+                        },
+                        "params": {
+                            "type": "array",
+                            "description": "Optional parameters for the query"
+                        }
+                    },
+                    "required": ["sql"]
+                }
+            },
+            {
+                "name": "list_tables",
+                "description": "List all tables in the database",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        ]
+        
+        result = {"tools": tools}
+        self.send_response(request_id, result)
+        log_stderr("Tools list response sent")
+    
+    def handle_tools_call(self, request_id: Any, params: Dict):
+        """Executar ferramenta"""
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+        
+        log_stderr(f"Handling tools/call request: {tool_name}")
+        
+        try:
+            if tool_name == "test_connection":
+                result_data = firebird_server.test_connection()
+                content = [
+                    {
+                        "type": "text",
+                        "text": f"Connection test result: {json.dumps(result_data, indent=2)}"
+                    }
+                ]
+            
+            elif tool_name == "execute_query":
+                sql = arguments.get("sql")
+                params_list = arguments.get("params")
+                
+                if not sql:
+                    raise ValueError("SQL query is required")
+                
+                result_data = firebird_server.execute_query(sql, params_list)
+                content = [
+                    {
+                        "type": "text", 
+                        "text": f"Query result: {json.dumps(result_data, indent=2)}"
+                    }
+                ]
+            
+            elif tool_name == "list_tables":
+                tables = firebird_server.get_tables()
+                content = [
+                    {
+                        "type": "text",
+                        "text": f"Tables in database: {json.dumps(tables, indent=2)}"
+                    }
+                ]
+            
+            else:
+                raise ValueError(f"Unknown tool: {tool_name}")
+            
+            result = {
+                "content": content,
+                "isError": False
+            }
+            
+            self.send_response(request_id, result)
+            log_stderr(f"Tool {tool_name} executed successfully")
+            
+        except Exception as e:
+            log_stderr(f"Tool {tool_name} failed: {e}")
+            error_content = [
+                {
+                    "type": "text",
+                    "text": f"Error executing {tool_name}: {str(e)}"
+                }
+            ]
+            result = {
+                "content": error_content,
+                "isError": True
+            }
+            self.send_response(request_id, result)
+    
+    def handle_request(self, request: Dict):
+        """Processar requisição JSON-RPC"""
+        try:
+            method = request.get("method")
+            request_id = request.get("id")
+            params = request.get("params", {})
+            
+            log_stderr(f"Received request: {method}")
+            
+            if method == "initialize":
+                self.handle_initialize(request_id, params)
+            elif method == "tools/list":
+                self.handle_tools_list(request_id, params)
+            elif method == "tools/call":
+                self.handle_tools_call(request_id, params)
+            elif method == "notifications/initialized":
+                # Notificação - não precisa resposta
+                log_stderr("Received initialized notification")
+            else:
+                log_stderr(f"Unknown method: {method}")
+                self.send_error(request_id, -32601, f"Method not found: {method}")
+                
+        except Exception as e:
+            log_stderr(f"Error handling request: {e}")
+            self.send_error(request.get("id"), -32603, str(e))
+    
+    def run(self):
+        """Loop principal do servidor"""
+        log_stderr("MCP Server ready - waiting for requests")
+        
+        try:
+            for line in sys.stdin:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    request = json.loads(line)
+                    self.handle_request(request)
+                except json.JSONDecodeError as e:
+                    log_stderr(f"Invalid JSON: {e}")
+                except Exception as e:
+                    log_stderr(f"Error processing request: {e}")
+                    
+        except KeyboardInterrupt:
+            log_stderr("Server interrupted")
+        except Exception as e:
+            log_stderr(f"Server error: {e}")
+        finally:
+            log_stderr("Server shutting down")
 
-# Interceptar erros globais
-@app.exception_handler(Exception)
-def global_exception_handler(request, exc):
-    stderr_log(f"Unhandled error: {exc}")
-    return {"error": str(exc)}
+def main():
+    """Função principal"""
+    log_stderr("Starting MCP Firebird Native Server")
+    
+    # Testar conexão na inicialização (rápido)
+    try:
+        result = firebird_server.test_connection()
+        if result["connected"]:
+            log_stderr(f"Database connection OK - Firebird {result['version']}")
+        else:
+            log_stderr(f"Database connection failed: {result['error']}")
+    except Exception as e:
+        log_stderr(f"Initial connection test failed: {e}")
+    
+    # Iniciar servidor MCP
+    server = MCPServer()
+    server.run()
 
 if __name__ == "__main__":
-    port = int(os.getenv('MCP_SERVER_PORT', 3000))
-    
-    stderr_log(f"Starting server on port {port}")
-    stderr_log("Server ready for connections")
-    
-    # Configuração uvicorn otimizada para velocidade
-    uvicorn.run(
-        "server:app",
-        host="0.0.0.0",
-        port=port,
-        log_level="warning",  # Menos logs
-        access_log=False,     # Sem access logs
-        reload=False,
-        workers=1            # Apenas 1 worker
-    )
+    main()

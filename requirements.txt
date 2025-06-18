@@ -1,9 +1,1 @@
-# Dependências para o Servidor MCP Firebird (cliente apenas)
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
 fdb==2.0.2
-pydantic==2.5.0
-python-dotenv==1.0.0
-aiofiles==23.2.1
-httpx==0.25.2
-requests==2.31.0
