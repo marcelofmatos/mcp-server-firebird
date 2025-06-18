@@ -2,7 +2,7 @@
 FROM python:3.11-slim
 
 # Metadados da imagem
-LABEL maintainer="seu-email@exemplo.com"
+LABEL maintainer="marcelofmatos@gmail.com"
 LABEL description="Servidor MCP para conexão com Firebird externo"
 LABEL version="1.0"
 
