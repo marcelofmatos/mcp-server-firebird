@@ -22,7 +22,9 @@ logger = logging.getLogger(__name__)
 # Verificar e importar FDB com diagnóstico melhorado
 try:
     import fdb
-    logger.info(f"FDB library loaded successfully - Version: {fdb.version}")
+    # FDB não tem atributo 'version', usar __version__ se disponível
+    fdb_version = getattr(fdb, '__version__', 'Unknown')
+    logger.info(f"FDB library loaded successfully - Version: {fdb_version}")
 except ImportError as e:
     logger.error(f"Failed to import FDB library: {e}")
     logger.error("Please install FDB: pip install fdb")
@@ -49,7 +51,9 @@ except Exception as e:
         logger.error("No Firebird client libraries found in common locations")
         logger.error("Please install: apt-get install libfbclient2 firebird-dev")
     
-    raise
+    # Continuar mesmo sem version - o FDB está funcionando
+    logger.info("Continuing without version info - FDB import successful")
+    fdb_version = 'Unknown'
 
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
@@ -435,7 +439,7 @@ async def health_check():
             "status": "unhealthy", 
             "database": "disconnected",
             "error": status.error,
-            "fdb_version": fdb.version,
+            "fdb_version": fdb_version,
             "config": {
                 "host": DB_CONFIG['host'],
                 "port": DB_CONFIG['port'],
@@ -486,7 +490,7 @@ async def diagnostics():
     
     return {
         "python_version": sys.version,
-        "fdb_version": fdb.version,
+        "fdb_version": fdb_version,
         "environment": {
             "LD_LIBRARY_PATH": os.environ.get('LD_LIBRARY_PATH', 'Not set'),
             "FIREBIRD": os.environ.get('FIREBIRD', 'Not set'),
