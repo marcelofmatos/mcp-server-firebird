@@ -33,7 +33,7 @@ RUN echo "🔥 Tentando instalar bibliotecas Firebird..." && \
      cd /tmp && \
      wget -q https://github.com/FirebirdSQL/firebird/releases/download/v3.0.10/Firebird-3.0.10.33601-0.amd64.tar.gz && \
      tar -xzf Firebird-3.0.10.33601-0.amd64.tar.gz && \
-     cd Firebird-* && \
+     cd Firebird-*/ && \
      mkdir -p /usr/lib/firebird/3.0 /usr/include/firebird && \
      cp lib/libfbclient.so.2.5.9 /usr/lib/firebird/3.0/ && \
      ln -sf /usr/lib/firebird/3.0/libfbclient.so.2.5.9 /usr/lib/libfbclient.so.2 && \
