@@ -345,7 +345,9 @@ class MCPServer:
         result = {
             "protocolVersion": "2024-11-05",
             "capabilities": {
-                "tools": {"listChanged": False}
+                "tools": {"listChanged": False},
+                "resources": {"subscribe": False, "listChanged": False},
+                "prompts": {"listChanged": False}
             },
             "serverInfo": {
                 "name": os.getenv("MCP_SERVER_NAME", "firebird-mcp-server"),
@@ -405,6 +407,20 @@ class MCPServer:
         ]
         
         self.send_response(request_id, {"tools": tools})
+    
+    def handle_resources_list(self, request_id: Any, params: Dict):
+        """Listar recursos disponíveis"""
+        # Para este servidor, não temos recursos específicos como arquivos
+        # Retornamos lista vazia conforme especificação MCP
+        resources = []
+        self.send_response(request_id, {"resources": resources})
+    
+    def handle_prompts_list(self, request_id: Any, params: Dict):
+        """Listar prompts disponíveis"""
+        # Para este servidor, não temos prompts predefinidos
+        # Retornamos lista vazia conforme especificação MCP
+        prompts = []
+        self.send_response(request_id, {"prompts": prompts})
     
     def handle_tools_call(self, request_id: Any, params: Dict):
         """Executar ferramenta"""
@@ -527,6 +543,10 @@ class MCPServer:
                 self.handle_tools_list(request_id, params)
             elif method == "tools/call":
                 self.handle_tools_call(request_id, params)
+            elif method == "resources/list":
+                self.handle_resources_list(request_id, params)
+            elif method == "prompts/list":
+                self.handle_prompts_list(request_id, params)
             elif method == "notifications/initialized":
                 log("📨 Received initialized notification")
             else:
