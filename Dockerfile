@@ -1,32 +1,33 @@
-# Dockerfile Mínimo - Garantido para funcionar
+# Dockerfile Simples - MCP Firebird para Banco Externo
 FROM python:3.11-slim
 
-# Instalar apenas o essencial
+# Instalar dependências do sistema e cliente Firebird
 RUN apt-get update && apt-get install -y \
-    curl \
+    firebird3.0-client \
+    libfbclient2 \
     && rm -rf /var/lib/apt/lists/*
+
+# Configurar bibliotecas
+RUN ldconfig
+
+# Instalar biblioteca Python para Firebird
+RUN pip install --no-cache-dir fdb==2.0.2
 
 # Criar usuário
 RUN useradd -r -m mcp
 
-# Criar diretório
-RUN mkdir -p /app/mcp-server
-WORKDIR /app/mcp-server
-
-# Instalar FDB (sem bibliotecas por enquanto - para testar protocolo MCP)
-RUN pip3 install --no-cache-dir fdb==2.0.2
-
-# Copiar server.py
+# Diretório de trabalho
+WORKDIR /app
 COPY server.py .
 
-# Configurar permissões
-RUN chown -R mcp:mcp /app/mcp-server
+# Permissões
+RUN chown -R mcp:mcp /app
 USER mcp
 
-# Variáveis de ambiente
-ENV FIREBIRD_HOST=localhost
+# Variáveis de ambiente para banco externo
+ENV FIREBIRD_HOST=192.168.1.100
 ENV FIREBIRD_PORT=3050
-ENV FIREBIRD_DATABASE=/path/to/database.fdb
+ENV FIREBIRD_DATABASE=/dados/sistema.fdb
 ENV FIREBIRD_USER=SYSDBA
 ENV FIREBIRD_PASSWORD=masterkey
 ENV FIREBIRD_CHARSET=UTF8
