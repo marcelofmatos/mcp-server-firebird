@@ -41,7 +41,7 @@ jobs:
             echo "IMAGE_NAME=${{ env.IMAGE_NAME }}"
             echo "Deploying to ${{ github.ref }}..."
             case "${{ github.ref }}" in
-              "refs/heads/main" | "refs/heads/master")
+              "refs/heads/prod")
                 WEBHOOK_URL=${{ secrets.WEBHOOK_DEPLOY_MAIN }}
                 ;;
               "refs/heads/homolog")
