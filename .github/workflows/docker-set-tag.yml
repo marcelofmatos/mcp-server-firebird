@@ -47,11 +47,11 @@ jobs:
               "refs/heads/homolog")
                 WEBHOOK_URL=${{ secrets.WEBHOOK_DEPLOY_HOMOLOG }}
                 ;;
-              *)
-                echo "No deployment for branch ${{ github.ref }}"
-                exit 0
-                ;;
             esac
+            if [ -z "${WEBHOOK_URL}" ]; then
+              echo "No webhook URL configured for this branch."
+              exit 0
+            fi
             echo "Webhook URL: ${WEBHOOK_URL}"
             curl --silent --fail -X POST ${WEBHOOK_URL} -H "Content-Type: application/json" -d "{\"image_name\": \"${{ env.IMAGE_NAME }}\"}"
 
