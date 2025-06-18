@@ -1,9 +1,22 @@
-# Dockerfile Simples - MCP Firebird para Banco Externo
-FROM python:3.11-slim
+# Dockerfile Simples e Funcional - MCP Firebird
+FROM ubuntu:22.04
 
-# Instalar dependências do sistema e cliente Firebird
+# Evitar prompts interativos
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Python e dependências básicas
 RUN apt-get update && apt-get install -y \
-    firebird3.0-client \
+    python3 \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    wget \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar cliente Firebird do repositório Ubuntu
+RUN apt-get update && apt-get install -y \
+    firebird3.0-client-core \
     libfbclient2 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -11,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 RUN ldconfig
 
 # Instalar biblioteca Python para Firebird
-RUN pip install --no-cache-dir fdb==2.0.2
+RUN pip3 install --no-cache-dir fdb==2.0.2
 
 # Criar usuário
 RUN useradd -r -m mcp
