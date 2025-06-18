@@ -392,7 +392,6 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 - **Issues**: [GitHub Issues](https://github.com/marcelofmatos/mcp-server-firebird/issues)
 - **Discussões**: [GitHub Discussions](https://github.com/marcelofmatos/mcp-server-firebird/discussions)
-- **Email**: contato@exemplo.com
 
 ---
 
