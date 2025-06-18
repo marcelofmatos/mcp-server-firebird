@@ -179,6 +179,10 @@ class MCPServer:
             "capabilities": {
                 "tools": {
                     "listChanged": False
+                },
+                "resources": {
+                    "subscribe": False,
+                    "listChanged": False
                 }
             },
             "serverInfo": {
@@ -189,6 +193,18 @@ class MCPServer:
         
         self.send_response(request_id, result)
         log_stderr("Initialize response sent")
+    
+    def handle_resources_list(self, request_id: Any, params: Dict):
+        """Listar recursos disponíveis"""
+        log_stderr("Handling resources/list request")
+        
+        # MCP pode ter recursos (arquivos, documentos, etc.)
+        # Para Firebird, vamos retornar lista vazia por enquanto
+        resources = []
+        
+        result = {"resources": resources}
+        self.send_response(request_id, result)
+        log_stderr("Resources list response sent")
     
     def handle_tools_list(self, request_id: Any, params: Dict):
         """Listar ferramentas disponíveis"""
@@ -345,6 +361,8 @@ class MCPServer:
                 self.handle_tools_list(request_id, params)
             elif method == "tools/call":
                 self.handle_tools_call(request_id, params)
+            elif method == "resources/list":
+                self.handle_resources_list(request_id, params)
             elif method == "notifications/initialized":
                 # Notificação - não precisa resposta
                 log_stderr("Received initialized notification")
