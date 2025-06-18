@@ -53,7 +53,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copiar código
 COPY server.py .
-COPY test-connectivity.py .
+COPY test-connection.py .
 COPY firebird-diagnostics.py .
 COPY test-helper.sh .
 RUN chown -R mcp:mcp /app/mcp-server && chmod +x /app/mcp-server/*.py /app/mcp-server/*.sh
