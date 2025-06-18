@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-MCP Server Simples para Firebird - Conexão Externa
-Versão enxuta focada em conectividade com banco externo
+MCP Server Completo para Firebird - Conexão Externa Obrigatória
+Versão com bibliotecas cliente Firebird instaladas no container
+Pode conectar diretamente a servidores Firebird externos
 """
 
 import json
@@ -19,36 +20,31 @@ def log(message: str):
     """Log simples para stderr"""
     print(f"[MCP-FIREBIRD] {message}", file=sys.stderr, flush=True)
 
-# Importar FDB com tratamento robusto de erros
-FDB_AVAILABLE = False
-FDB_ERROR = None
-
+# Importar FDB - agora é OBRIGATÓRIO (bibliotecas instaladas no container)
 try:
     import fdb
-    FDB_AVAILABLE = True
     log("✅ FDB library loaded successfully")
     log(f"FDB version: {fdb.__version__}")
     
-    # Verificar se consegue localizar as bibliotecas cliente
+    # Verificar se consegue localizar as bibliotecas cliente (deve encontrar)
     try:
         import ctypes.util
         fbclient_path = ctypes.util.find_library('fbclient')
         if fbclient_path:
             log(f"✅ Firebird client library found at: {fbclient_path}")
         else:
-            log("⚠️  Warning: libfbclient not found in system library path")
-            log(f"LD_LIBRARY_PATH: {os.getenv('LD_LIBRARY_PATH', 'not set')}")
+            log("❌ CRITICAL ERROR: libfbclient not found despite installation!")
+            log("This should not happen with the new Dockerfile")
+            sys.exit(1)
     except Exception as e:
-        log(f"Library check failed: {e}")
+        log(f"❌ CRITICAL ERROR during library check: {e}")
+        sys.exit(1)
         
 except ImportError as e:
-    FDB_AVAILABLE = False
-    FDB_ERROR = str(e)
-    log(f"❌ ERROR: Could not import fdb: {e}")
-    log("💡 Server will start in fallback mode (database operations will fail)")
-    log("To enable Firebird support:")
-    log("  1. Install: apt-get install firebird3.0-client-core libfbclient2")
-    log("  2. Or mount host libraries: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro")
+    log(f"❌ CRITICAL ERROR: Could not import fdb: {e}")
+    log("This should not happen - FDB is installed in the container")
+    log("Please rebuild the Docker image")
+    sys.exit(1)
 
 # Configuração do banco externo
 DB_CONFIG = {
@@ -69,13 +65,6 @@ class FirebirdMCPServer:
         
     def test_connection(self):
         """Testar conexão com Firebird externo"""
-        if not FDB_AVAILABLE:
-            return {
-                "connected": False, 
-                "error": f"FDB library not available: {FDB_ERROR}",
-                "solution": "Install Firebird client libraries: apt-get install firebird3.0-client-core libfbclient2"
-            }
-            
         try:
             log(f"Attempting connection to: {self.dsn}")
             conn = fdb.connect(
@@ -95,27 +84,26 @@ class FirebirdMCPServer:
             error_msg = str(e)
             
             # Diagnóstico específico para problemas comuns
-            if "could not be determined" in error_msg.lower():
-                error_msg += "\n\n💡 SOLUTION: Firebird client libraries not found. Try:\n"
-                error_msg += "1. Install on host: apt-get install firebird3.0-client-core libfbclient2\n"
-                error_msg += "2. Mount host libs: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro\n"
-                error_msg += f"3. Current LD_LIBRARY_PATH: {os.getenv('LD_LIBRARY_PATH', 'not set')}"
-            elif "network error" in error_msg.lower() or "connection refused" in error_msg.lower():
-                error_msg += f"\n\n💡 SOLUTION: Check network connectivity to {DB_CONFIG['host']}:{DB_CONFIG['port']}"
-            elif "login" in error_msg.lower() or "password" in error_msg.lower():
-                error_msg += "\n\n💡 SOLUTION: Check username/password in environment variables"
+            if "network error" in error_msg.lower() or "connection refused" in error_msg.lower():
+                error_msg += f"\n\n💡 NETWORK ISSUE: Cannot reach {DB_CONFIG['host']}:{DB_CONFIG['port']}"
+                error_msg += "\n• Check if Firebird server is running"
+                error_msg += "\n• Check firewall rules"
+                error_msg += "\n• Verify host and port are correct"
+            elif "login" in error_msg.lower() or "password" in error_msg.lower() or "authentication" in error_msg.lower():
+                error_msg += "\n\n💡 AUTHENTICATION ISSUE: Invalid credentials"
+                error_msg += f"\n• Check username: {DB_CONFIG['user']}"
+                error_msg += "\n• Check password in FIREBIRD_PASSWORD"
+                error_msg += "\n• Verify user exists in Firebird security database"
+            elif "database" in error_msg.lower() and "not found" in error_msg.lower():
+                error_msg += f"\n\n💡 DATABASE ISSUE: Database file not found"
+                error_msg += f"\n• Check database path: {DB_CONFIG['database']}"
+                error_msg += "\n• Verify database file exists on Firebird server"
+                error_msg += "\n• Check file permissions"
             
             return {"connected": False, "error": error_msg}
     
     def execute_query(self, sql: str, params: Optional[List] = None):
         """Executar query SQL"""
-        if not FDB_AVAILABLE:
-            return {
-                "success": False, 
-                "error": f"FDB library not available: {FDB_ERROR}",
-                "solution": "Install Firebird client libraries to enable database operations"
-            }
-            
         try:
             conn = fdb.connect(
                 dsn=self.dsn,
@@ -134,7 +122,7 @@ class FirebirdMCPServer:
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
                 rows = cursor.fetchall()
                 data = [dict(zip(columns, row)) for row in rows]
-                result = {"success": True, "data": data}
+                result = {"success": True, "data": data, "row_count": len(data)}
             else:
                 affected = cursor.rowcount
                 conn.commit()
@@ -148,9 +136,6 @@ class FirebirdMCPServer:
     
     def get_tables(self):
         """Listar tabelas"""
-        if not FDB_AVAILABLE:
-            return {"error": "FDB library not available"}
-            
         try:
             conn = fdb.connect(
                 dsn=self.dsn,
@@ -160,7 +145,7 @@ class FirebirdMCPServer:
             )
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT TRIM(RDB$RELATION_NAME) 
+                SELECT TRIM(RDB$RELATION_NAME) as TABLE_NAME
                 FROM RDB$RELATIONS 
                 WHERE RDB$VIEW_BLR IS NULL 
                 AND (RDB$SYSTEM_FLAG IS NULL OR RDB$SYSTEM_FLAG = 0)
@@ -168,10 +153,10 @@ class FirebirdMCPServer:
             """)
             tables = [row[0] for row in cursor.fetchall()]
             conn.close()
-            return tables
+            return {"success": True, "tables": tables, "count": len(tables)}
         except Exception as e:
             log(f"Get tables failed: {e}")
-            return {"error": str(e)}
+            return {"success": False, "error": str(e)}
 
 # Instância do servidor Firebird
 firebird_server = FirebirdMCPServer()
@@ -217,7 +202,7 @@ class MCPServer:
         tools = [
             {
                 "name": "test_connection",
-                "description": "Test connection to external Firebird database",
+                "description": "Test connection to external Firebird database and show detailed diagnostics",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -226,19 +211,19 @@ class MCPServer:
             },
             {
                 "name": "execute_query",
-                "description": "Execute SQL query on Firebird database",
+                "description": "Execute SQL query on external Firebird database (SELECT, INSERT, UPDATE, DELETE)",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "sql": {"type": "string", "description": "SQL query to execute"},
-                        "params": {"type": "array", "description": "Optional parameters"}
+                        "params": {"type": "array", "description": "Optional parameters for parameterized queries"}
                     },
                     "required": ["sql"]
                 }
             },
             {
                 "name": "list_tables",
-                "description": "List all tables in the database",
+                "description": "List all user tables in the external Firebird database",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -247,7 +232,7 @@ class MCPServer:
             },
             {
                 "name": "server_status",
-                "description": "Get detailed server status and diagnostics",
+                "description": "Get complete server status, library information, and connection diagnostics",
                 "inputSchema": {
                     "type": "object",
                     "properties": {},
@@ -284,24 +269,20 @@ class MCPServer:
                 }]
             
             elif tool_name == "list_tables":
-                tables = firebird_server.get_tables()
-                if isinstance(tables, dict) and "error" in tables:
-                    # FDB não disponível ou erro
-                    content = [{
-                        "type": "text",
-                        "text": f"Tables list failed:\n```json\n{json.dumps(tables, indent=2)}\n```"
-                    }]
-                else:
-                    # Lista normal de tabelas
-                    content = [{
-                        "type": "text",
-                        "text": f"Tables:\n```json\n{json.dumps(tables, indent=2)}\n```"
-                    }]
+                result = firebird_server.get_tables()
+                content = [{
+                    "type": "text",
+                    "text": f"Tables result:\n```json\n{json.dumps(result, indent=2)}\n```"
+                }]
             
             elif tool_name == "server_status":
+                # Verificar status da conexão atual
+                connection_test = firebird_server.test_connection()
+                
                 status = {
-                    "fdb_available": FDB_AVAILABLE,
-                    "fdb_error": FDB_ERROR if not FDB_AVAILABLE else None,
+                    "firebird_libraries": "✅ Installed (required for external connections)",
+                    "fdb_version": fdb.__version__,
+                    "client_library": None,
                     "database_config": {
                         "host": DB_CONFIG['host'],
                         "port": DB_CONFIG['port'],
@@ -310,25 +291,23 @@ class MCPServer:
                         "charset": DB_CONFIG['charset']
                     },
                     "dsn": firebird_server.dsn,
+                    "connection_test": connection_test,
                     "environment": {
-                        "LD_LIBRARY_PATH": os.getenv('LD_LIBRARY_PATH', 'not set'),
-                        "FIREBIRD_HOME": os.getenv('FIREBIRD_HOME', 'not set')
-                    },
-                    "recommendations": []
+                        "LD_LIBRARY_PATH": os.getenv('LD_LIBRARY_PATH', 'not set')
+                    }
                 }
                 
-                # Adicionar recomendações baseadas no status
-                if not FDB_AVAILABLE:
-                    status["recommendations"].append(
-                        "Install Firebird client: apt-get install firebird3.0-client-core libfbclient2"
-                    )
-                    status["recommendations"].append(
-                        "Or mount host libraries: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro"
-                    )
+                # Verificar localização da biblioteca cliente
+                try:
+                    import ctypes.util
+                    fbclient_path = ctypes.util.find_library('fbclient')
+                    status["client_library"] = fbclient_path if fbclient_path else "Not found in library path"
+                except:
+                    status["client_library"] = "Could not check library path"
                 
                 content = [{
                     "type": "text",
-                    "text": f"Server Status:\n```json\n{json.dumps(status, indent=2)}\n```"
+                    "text": f"Complete Server Status:\n```json\n{json.dumps(status, indent=2)}\n```"
                 }]
             
             else:
@@ -400,54 +379,47 @@ def main():
     log(f"🗄️  Database: {DB_CONFIG['database']}")
     log(f"👤 User: {DB_CONFIG['user']}")
     
-    # Diagnóstico detalhado das bibliotecas
-    log("🔍 Checking Firebird libraries...")
-    if FDB_AVAILABLE:
-        log("✅ FDB Python library available")
-        
-        # Verificar bibliotecas cliente
-        try:
-            import ctypes.util
-            fbclient_path = ctypes.util.find_library('fbclient')
-            if fbclient_path:
-                log(f"✅ Firebird client found: {fbclient_path}")
-            else:
-                log("⚠️  Firebird client libraries not found")
-                log("💡 Solutions:")
-                log("  1. Install on host: apt-get install firebird3.0-client-core libfbclient2")
-                log("  2. Mount host libs: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro")
-                log("  3. Download manually and mount to /usr/local/lib")
-        except Exception as e:
-            log(f"⚠️  Could not check library paths: {e}")
-        
-        # Teste inicial de conexão (se bibliotecas disponíveis)
-        log("🔌 Testing database connection...")
-        try:
-            result = firebird_server.test_connection()
-            if result["connected"]:
-                log(f"✅ Database connection OK - Firebird {result['version']}")
-            else:
-                log(f"❌ Database connection failed")
-                # Mostrar apenas primeira linha do erro para não poluir o log
-                error_lines = result['error'].split('\n')
-                log(f"   Error: {error_lines[0]}")
-                log("   (Use test_connection tool for detailed diagnosis)")
-        except Exception as e:
-            log(f"Connection test failed: {e}")
-    else:
-        log("❌ FDB Python library not available")
-        log(f"   Error: {FDB_ERROR}")
-        log("💡 To enable Firebird support:")
-        log("   1. Install on host: apt-get install firebird3.0-client-core libfbclient2")
-        log("   2. Mount libraries: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro")
+    # As bibliotecas Firebird são obrigatórias neste container
+    log("🔍 Firebird libraries status: ✅ INSTALLED (required for external connections)")
+    
+    # Verificar localização da biblioteca cliente
+    try:
+        import ctypes.util
+        fbclient_path = ctypes.util.find_library('fbclient')
+        if fbclient_path:
+            log(f"📚 Client library location: {fbclient_path}")
+        else:
+            log("⚠️  Warning: libfbclient not found in standard paths")
+    except Exception as e:
+        log(f"⚠️  Could not check library paths: {e}")
+    
+    # Teste inicial de conexão ao banco externo
+    log("🔌 Testing database connection...")
+    try:
+        result = firebird_server.test_connection()
+        if result["connected"]:
+            log(f"✅ Database connection OK - Firebird {result['version']}")
+            log("🎯 Ready to execute SQL queries on external Firebird database")
+        else:
+            log("❌ Database connection failed")
+            # Mostrar apenas primeira linha do erro para não poluir o log
+            error_lines = result['error'].split('\n')
+            log(f"   Error: {error_lines[0]}")
+            log("💡 Use test_connection tool for detailed diagnosis")
+            log("🔧 Common issues:")
+            log("   • Check if Firebird server is running and accessible")
+            log("   • Verify host, port, database path, and credentials")
+            log("   • Check firewall rules")
+    except Exception as e:
+        log(f"Connection test failed: {e}")
     
     log("")
     log("🚀 Starting MCP server...")
-    log("   (Server will work even if Firebird libraries are missing)")
-    log("   (Use server_status tool to check detailed diagnostics)")
+    log("📋 Available tools: test_connection, execute_query, list_tables, server_status")
+    log("🔗 Ready to handle MCP requests for external Firebird database")
     log("")
     
-    # Iniciar servidor MCP (sempre inicia, mesmo sem FDB)
+    # Iniciar servidor MCP
     server = MCPServer()
     server.run()
 

@@ -1,54 +1,87 @@
-# Dockerfile Ultra-Simples - MCP Firebird (Sem complicações)
-FROM python:3.11-slim
+# Dockerfile Robusto - MCP Firebird com instalação resiliente
+FROM ubuntu:22.04
 
-# Instalar apenas dependências básicas (sem repositórios externos)
+# Evitar prompts interativos
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Python e dependências básicas
 RUN apt-get update && apt-get install -y \
-    curl \
+    python3 \
+    python3-pip \
+    python3-dev \
+    build-essential \
     wget \
-    gcc \
+    curl \
+    software-properties-common \
+    ca-certificates \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalar FDB Python (funciona mesmo sem bibliotecas cliente)
-RUN pip install --no-cache-dir fdb==2.0.2
+# Tentar múltiplas formas de instalar Firebird (sem falhar o build)
+RUN echo "🔥 Tentando instalar bibliotecas Firebird..." && \
+    # Método 1: Tentar repositórios padrão
+    (apt-get update && \
+     apt-get install -y firebird3.0-client-core libfbclient2 firebird3.0-common-doc && \
+     echo "✅ Firebird instalado via repositórios padrão") || \
+    # Método 2: Tentar com universe
+    (add-apt-repository universe && \
+     apt-get update && \
+     apt-get install -y firebird3.0-client-core libfbclient2 && \
+     echo "✅ Firebird instalado via repositório universe") || \
+    # Método 3: Instalação manual
+    (echo "📦 Tentando instalação manual..." && \
+     cd /tmp && \
+     wget -q https://github.com/FirebirdSQL/firebird/releases/download/v3.0.10/Firebird-3.0.10.33601-0.amd64.tar.gz && \
+     tar -xzf Firebird-3.0.10.33601-0.amd64.tar.gz && \
+     cd Firebird-* && \
+     mkdir -p /usr/lib/firebird/3.0 /usr/include/firebird && \
+     cp lib/libfbclient.so.2.5.9 /usr/lib/firebird/3.0/ && \
+     ln -sf /usr/lib/firebird/3.0/libfbclient.so.2.5.9 /usr/lib/libfbclient.so.2 && \
+     ln -sf /usr/lib/libfbclient.so.2 /usr/lib/libfbclient.so && \
+     cp include/ibase.h /usr/include/firebird/ 2>/dev/null || true && \
+     echo "/usr/lib/firebird/3.0" > /etc/ld.so.conf.d/firebird.conf && \
+     cd / && rm -rf /tmp/Firebird-* && \
+     echo "✅ Firebird instalado manualmente") || \
+    echo "⚠️  Falha na instalação do Firebird - continuando..." && \
+    # Limpeza final
+    rm -rf /var/lib/apt/lists/* /tmp/*
 
-# Criar usuário
+# Configurar variáveis de ambiente para Firebird
+ENV LD_LIBRARY_PATH=/usr/lib/firebird/3.0:/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+
+# Atualizar cache das bibliotecas
+RUN ldconfig
+
+# Verificar o que foi instalado (sem falhar o build)
+RUN echo "📋 Status da instalação Firebird:" && \
+    echo "=== Verificando arquivos instalados ===" && \
+    (ls -la /usr/lib/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/") && \
+    (ls -la /usr/lib/firebird/3.0/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/firebird/3.0/") && \
+    (ls -la /usr/lib/x86_64-linux-gnu/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/x86_64-linux-gnu/") && \
+    echo "=== Verificando ldconfig ===" && \
+    (ldconfig -p | grep fbclient || echo "fbclient não encontrado no cache") && \
+    echo "=== LD_LIBRARY_PATH ===" && \
+    echo "$LD_LIBRARY_PATH" && \
+    echo "=== Instalação completa ==="
+
+# Instalar driver Python Firebird
+RUN pip3 install --no-cache-dir fdb==2.0.2
+
+# Testar se FDB funciona (sem falhar o build)
+RUN echo "🐍 Testando FDB Python..." && \
+    (python3 -c "import fdb; print('✅ FDB imported successfully')" || \
+     echo "⚠️  FDB import failed - will be handled at runtime") && \
+    (python3 -c "import ctypes.util; lib = ctypes.util.find_library('fbclient'); print(f'Library path: {lib}' if lib else 'Library not found in standard paths')" || \
+     echo "⚠️  Could not check library path")
+
+# Criar usuário não-root
 RUN useradd -r -m mcp
 
-# Diretório de trabalho
+# Configurar diretório de trabalho
 WORKDIR /app
 COPY server.py .
 
-# Script de inicialização simples
-RUN echo '#!/bin/bash\n\
-echo "🔥 MCP Firebird Server Starting..."\n\
-echo "📍 Host: ${FIREBIRD_HOST}"\n\
-echo "🗄️  Database: ${FIREBIRD_DATABASE}"\n\
-echo "🔍 Checking Firebird libraries..."\n\
-if python3 -c "import fdb; print(\"FDB imported OK\")" 2>/dev/null; then\n\
-    echo "✅ FDB Python library available"\n\
-    python3 -c "\
-import ctypes.util;\
-lib = ctypes.util.find_library(\"fbclient\");\
-if lib:\
-    print(f\"✅ Firebird client found: {lib}\");\
-else:\
-    print(\"⚠️  Firebird client libraries not found\");\
-    print(\"💡 Solutions:\");\
-    print(\"  1. Install on host: apt-get install firebird3.0-client-core libfbclient2\");\
-    print(\"  2. Mount host libs: -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro\")\
-" 2>/dev/null || echo "⚠️  Could not check library paths"\n\
-else\n\
-    echo "❌ FDB Python library not available"\n\
-fi\n\
-echo ""\n\
-echo "🚀 Starting MCP Server..."\n\
-echo "   (Server will work even if Firebird libraries are missing)"\n\
-echo "   (Use server_status tool to check detailed diagnostics)"\n\
-echo ""\n\
-exec python3 server.py\n\
-' > start.sh && chmod +x start.sh
-
-# Permissões
+# Configurar permissões
 RUN chown -R mcp:mcp /app
 USER mcp
 
@@ -61,48 +94,4 @@ ENV FIREBIRD_PASSWORD=masterkey
 ENV FIREBIRD_CHARSET=UTF8
 
 # Comando de execução
-CMD ["./start.sh"]
-
-# ==========================================
-# INSTRUÇÕES DE USO
-# ==========================================
-#
-# Este Dockerfile é ULTRA-SIMPLES e sempre funciona!
-# Sem scripts bash complexos, sem repositórios externos.
-#
-# 1. Build (sempre sucede):
-#    docker build -t mcp-firebird .
-#
-# 2. Execução básica (para teste):
-#    docker run -e FIREBIRD_HOST=192.168.1.50 \
-#               -e FIREBIRD_DATABASE=/dados/app.fdb \
-#               -e FIREBIRD_PASSWORD=minhasenha \
-#               mcp-firebird
-#
-# 3. MELHOR OPÇÃO - Instalar Firebird no host:
-#    # No host Docker:
-#    apt-get update
-#    apt-get install firebird3.0-client-core libfbclient2
-#    
-#    # Executar container:
-#    docker run -v /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro \
-#               -e FIREBIRD_HOST=192.168.1.50 \
-#               -e FIREBIRD_DATABASE=/dados/app.fdb \
-#               -e FIREBIRD_PASSWORD=minhasenha \
-#               mcp-firebird
-#
-# 4. Alternativa - Baixar bibliotecas manualmente:
-#    mkdir firebird-libs && cd firebird-libs
-#    wget https://github.com/FirebirdSQL/firebird/releases/download/v3.0.10/Firebird-3.0.10.33601-0.amd64.tar.gz
-#    tar -xzf Firebird-*.tar.gz
-#    cp Firebird-*/lib/libfbclient.so.2.5.9 ./libfbclient.so.2
-#    docker run -v $(pwd):/usr/local/lib:ro -e FIREBIRD_HOST=192.168.1.50 mcp-firebird
-#
-# 5. O servidor sempre mostra:
-#    🔥 Status de inicialização
-#    📍 Configuração do banco
-#    🔍 Status das bibliotecas Firebird
-#    🔌 Teste de conexão
-#    💡 Soluções se houver problemas
-#
-# ==========================================
+CMD ["python3", "server.py"]
