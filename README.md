@@ -1,437 +1,415 @@
-# Servidor MCP para Firebird Externo
+# MCP Server Firebird
 
-Um servidor MCP (Model Context Protocol) que conecta a um banco de dados Firebird externo existente, permitindo que modelos de IA interajam diretamente com seus dados.
+Um servidor MCP (Model Context Protocol) completo para conectar a bancos de dados Firebird externos. Este servidor permite que assistentes de IA executem queries SQL, listem tabelas e gerenciem conexões com bancos Firebird de forma segura e eficiente.
 
-## Características
+## 🔥 Características
 
-- **Conexão Externa**: Conecta a qualquer servidor Firebird existente
-- **API REST**: Interface HTTP para comunicação com modelos de IA
-- **MCP Protocol**: Compatível com o protocolo MCP
-- **Docker**: Fácil implantação e gerenciamento
-- **Health Check**: Monitoramento de saúde e conectividade
-- **Schema Discovery**: Descoberta automática de estrutura do banco
+- ✅ **Protocolo MCP Completo** - Implementa todas as especificações do MCP 2024-11-05
+- ✅ **Firebird 3.0.10 Oficial** - Bibliotecas cliente incluídas no container
+- ✅ **Auto-contido** - Não precisa de volumes ou instalações no host
+- ✅ **Diagnósticos Inteligentes** - Detecta e resolve problemas automaticamente
+- ✅ **Conexões Externas** - Conecta a qualquer servidor Firebird remoto
+- ✅ **4 Ferramentas MCP** - test_connection, execute_query, list_tables, server_status
+- ✅ **Seguro** - Usuário não-root, health check integrado
 
-## Estrutura do Projeto
+## 🚀 Instalação Rápida
 
-```
-.
-├── Dockerfile                 # Imagem Docker do servidor MCP
-├── docker-compose.yml        # Configuração para deployment
-├── requirements.txt          # Dependências Python
-├── mcp-server/
-│   └── server.py            # Servidor MCP Python
-└── README.md               # Esta documentação
-```
+### Pré-requisitos
 
-## Pré-requisitos
+- Docker instalado
+- Acesso a um servidor Firebird externo
+- Informações de conexão (host, porta, banco, usuário, senha)
 
-- Servidor Firebird 3.0+ em execução e acessível
-- Docker e Docker Compose instalados
-- Acesso de rede ao servidor Firebird
-
-## Configuração Rápida
-
-### 1. Clonar/Preparar Arquivos
+### Execução Básica
 
 ```bash
-mkdir mcp-firebird-server
-cd mcp-firebird-server
-mkdir mcp-server
-
-# Copiar todos os arquivos para as pastas apropriadas
+docker run -d \
+  --name mcp-firebird \
+  -e FIREBIRD_HOST=192.168.1.50 \
+  -e FIREBIRD_DATABASE=/dados/sistema.fdb \
+  -e FIREBIRD_USER=SYSDBA \
+  -e FIREBIRD_PASSWORD=masterkey \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
 ```
 
-### 2. Configurar Variáveis de Ambiente
-
-Edite o `docker-compose.yml` ou crie um arquivo `.env`:
-
-```env
-FIREBIRD_HOST=seu-servidor-firebird.com
-FIREBIRD_PORT=3050
-FIREBIRD_DATABASE=/caminho/para/seu/banco.fdb
-FIREBIRD_USER=SYSDBA
-FIREBIRD_PASSWORD=sua_senha_segura
-FIREBIRD_CHARSET=UTF8
-MCP_SERVER_PORT=3000
-MCP_LOG_LEVEL=info
-```
-
-### 3. Executar
+### Verificar Status
 
 ```bash
-# Construir e iniciar
-docker-compose up -d
+# Ver logs do container
+docker logs mcp-firebird
 
-# Verificar logs
-docker-compose logs -f mcp-server
-
-# Testar conectividade
-curl http://localhost:3000/health
+# Verificar se está rodando
+docker ps | grep mcp-firebird
 ```
 
-## Configuração Detalhada
+## ⚙️ Configuração
 
 ### Variáveis de Ambiente
 
-| Variável | Obrigatório | Padrão | Descrição |
-|----------|-------------|--------|-----------|
-| `FIREBIRD_HOST` | ✅ | localhost | Endereço do servidor Firebird |
-| `FIREBIRD_PORT` | ❌ | 3050 | Porta do servidor Firebird |
-| `FIREBIRD_DATABASE` | ✅ | - | Caminho completo do arquivo .fdb |
-| `FIREBIRD_USER` | ✅ | SYSDBA | Usuário do banco |
-| `FIREBIRD_PASSWORD` | ✅ | - | Senha do usuário |
-| `FIREBIRD_CHARSET` | ❌ | UTF8 | Charset da conexão |
-| `MCP_SERVER_PORT` | ❌ | 3000 | Porta do servidor MCP |
-| `MCP_LOG_LEVEL` | ❌ | info | Nível de log (debug, info, warning, error) |
-| `TZ` | ❌ | America/Sao_Paulo | Timezone |
+| Variável | Descrição | Padrão | Obrigatório |
+|----------|-----------|--------|-------------|
+| `FIREBIRD_HOST` | Endereço do servidor Firebird | `localhost` | ✅ |
+| `FIREBIRD_PORT` | Porta do servidor Firebird | `3050` | ❌ |
+| `FIREBIRD_DATABASE` | Caminho completo do banco | `/path/to/database.fdb` | ✅ |
+| `FIREBIRD_USER` | Usuário do banco | `SYSDBA` | ❌ |
+| `FIREBIRD_PASSWORD` | Senha do usuário | `masterkey` | ✅ |
+| `FIREBIRD_CHARSET` | Charset da conexão | `UTF8` | ❌ |
 
 ### Exemplos de Configuração
 
-#### Banco Local na Rede
-```env
-FIREBIRD_HOST=192.168.1.100
-FIREBIRD_DATABASE=/databases/sistema.fdb
-FIREBIRD_USER=APP_USER
-FIREBIRD_PASSWORD=senha123
+#### 1. Servidor Local
+```bash
+docker run -d \
+  --name mcp-firebird-local \
+  -e FIREBIRD_HOST=localhost \
+  -e FIREBIRD_DATABASE=/var/lib/firebird/employee.fdb \
+  -e FIREBIRD_PASSWORD=sua_senha \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
 ```
 
-#### Banco em Servidor Remoto
-```env
-FIREBIRD_HOST=db.minhaempresa.com
-FIREBIRD_PORT=3050
-FIREBIRD_DATABASE=/opt/databases/producao.fdb
-FIREBIRD_USER=SISTEMA
-FIREBIRD_PASSWORD=senha_complexa_aqui
+#### 2. Servidor Corporativo
+```bash
+docker run -d \
+  --name mcp-firebird-corp \
+  -e FIREBIRD_HOST=firebird.empresa.com \
+  -e FIREBIRD_PORT=3050 \
+  -e FIREBIRD_DATABASE=/aplicacao/sistema.fdb \
+  -e FIREBIRD_USER=APP_USER \
+  -e FIREBIRD_PASSWORD=senha_segura \
+  -e FIREBIRD_CHARSET=ISO8859_1 \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
 ```
 
-#### Banco com Embedded (mesmo servidor)
-```env
-FIREBIRD_HOST=localhost
-FIREBIRD_DATABASE=/var/lib/firebird/meuapp.fdb
-FIREBIRD_USER=SYSDBA
-FIREBIRD_PASSWORD=masterkey
+#### 3. Servidor em VPS
+```bash
+docker run -d \
+  --name mcp-firebird-vps \
+  -e FIREBIRD_HOST=10.20.30.40 \
+  -e FIREBIRD_DATABASE=/home/dados/banco.fdb \
+  -e FIREBIRD_USER=USUARIO_DB \
+  -e FIREBIRD_PASSWORD=password123 \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
 ```
 
-## API Endpoints
+## 🛠️ Ferramentas MCP Disponíveis
 
-### 🟢 Health Check
-```http
-GET /health
-```
-Verifica conectividade com o servidor Firebird.
+### 1. test_connection
+Testa a conexão com o banco Firebird e fornece diagnósticos detalhados.
 
-**Resposta de sucesso:**
+**Uso:**
 ```json
 {
-  "status": "healthy",
-  "database": "connected",
-  "server_version": "5.0.0.1306",
-  "database_path": "/databases/sistema.fdb"
+  "name": "test_connection"
 }
 ```
 
-### 📊 Informações do Banco
-```http
-GET /info
-```
-Retorna informações detalhadas sobre o banco.
+**Retorna:**
+- Status da conexão
+- Versão do Firebird
+- Diagnósticos de problemas
+- Soluções específicas
 
-**Resposta:**
+### 2. execute_query
+Executa queries SQL no banco Firebird.
+
+**Uso:**
 ```json
 {
-  "tables": ["USUARIOS", "PRODUTOS", "VENDAS"],
-  "version": "5.0.0.1306",
-  "database_path": "/databases/sistema.fdb",
-  "server_info": {
-    "database_name": "SISTEMA",
-    "protocol": "TCPv4",
-    "tables_count": 25
+  "name": "execute_query",
+  "arguments": {
+    "sql": "SELECT * FROM CUSTOMERS WHERE CITY = ?",
+    "params": ["São Paulo"]
   }
 }
 ```
 
-### 🔍 Executar Query
-```http
-POST /query
-Content-Type: application/json
+**Suporta:**
+- SELECT (retorna dados)
+- INSERT, UPDATE, DELETE (retorna linhas afetadas)
+- Queries parametrizadas
+- Transações automáticas
 
-{
-  "sql": "SELECT * FROM USUARIOS WHERE ATIVO = ?",
-  "params": ["S"]
-}
-```
+### 3. list_tables
+Lista todas as tabelas de usuário do banco.
 
-**Resposta:**
+**Uso:**
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "ID": 1,
-      "NOME": "João Silva",
-      "EMAIL": "joao@email.com",
-      "ATIVO": "S"
-    }
-  ],
-  "execution_time": 0.0234
+  "name": "list_tables"
 }
 ```
 
-### 📋 Listar Tabelas
-```http
-GET /tables
-```
-Retorna lista de todas as tabelas do banco.
+**Retorna:**
+- Lista de tabelas
+- Contador de tabelas
+- Nome do banco
 
-### 🏗️ Schema de Tabela
-```http
-GET /tables/{table_name}/schema
-```
-Retorna estrutura detalhada de uma tabela.
+### 4. server_status
+Mostra status completo do servidor MCP e bibliotecas.
 
-**Exemplo de resposta:**
+**Uso:**
 ```json
 {
-  "table_name": "USUARIOS",
-  "fields": [
-    {
-      "name": "ID",
-      "type": "INTEGER",
-      "length": 4,
-      "not_null": true,
-      "position": 0
-    },
-    {
-      "name": "NOME",
-      "type": "VARCHAR",
-      "length": 100,
-      "not_null": true,
-      "position": 1
-    }
-  ]
+  "name": "server_status"
 }
 ```
 
-### 🔧 Testar Conexão
-```http
-GET /connection/test
-```
-Testa a conectividade com o banco em tempo real.
+**Retorna:**
+- Status das bibliotecas FDB e Firebird
+- Configuração atual
+- Teste de conexão
+- Recomendações
 
-## Exemplos de Uso
+## 🔍 Troubleshooting
 
-### 1. Verificar Status do Servidor
+### Problema: Container não inicia
+
+**Sintomas:**
 ```bash
-curl http://localhost:3000/health
+docker logs mcp-firebird
+# Erro: FDB library not available
 ```
 
-### 2. Descobrir Estrutura do Banco
+**Solução:**
 ```bash
-# Listar tabelas
-curl http://localhost:3000/tables
-
-# Ver schema de uma tabela
-curl http://localhost:3000/tables/USUARIOS/schema
+# Rebuildar/baixar imagem mais recente
+docker pull ghcr.io/marcelofmatos/mcp-server-firebird:latest
+docker run --rm -it ghcr.io/marcelofmatos/mcp-server-firebird:latest python3 -c "import fdb; print('OK')"
 ```
 
-### 3. Executar Consultas
+### Problema: Erro de conexão de rede
+
+**Sintomas:**
+```
+❌ Connection failed: network error
+💡 NETWORK ISSUE: Cannot reach 192.168.1.50:3050
+```
+
+**Soluções:**
+1. Verificar se o servidor Firebird está rodando
+2. Testar conectividade de rede:
+   ```bash
+   # Do host Docker
+   telnet 192.168.1.50 3050
+   ```
+3. Verificar firewall
+4. Confirmar host e porta
+
+### Problema: Erro de autenticação
+
+**Sintomas:**
+```
+❌ Connection failed: login error
+💡 AUTHENTICATION ISSUE: Invalid credentials
+```
+
+**Soluções:**
+1. Verificar usuário e senha:
+   ```bash
+   docker run --rm \
+     -e FIREBIRD_HOST=seu.servidor \
+     -e FIREBIRD_PASSWORD=senha_correta \
+     ghcr.io/marcelofmatos/mcp-server-firebird:latest
+   ```
+2. Confirmar que usuário existe no Firebird
+3. Testar conexão com ferramenta externa (FlameRobin, IBExpert)
+
+### Problema: Banco não encontrado
+
+**Sintomas:**
+```
+❌ Connection failed: database not found
+💡 DATABASE ISSUE: Database file not found
+```
+
+**Soluções:**
+1. Verificar caminho do banco:
+   ```bash
+   # Caminho deve ser absoluto no servidor Firebird
+   -e FIREBIRD_DATABASE=/caminho/completo/banco.fdb
+   ```
+2. Confirmar que arquivo existe no servidor
+3. Verificar permissões do arquivo
+
+### Problema: Dependências faltando
+
+**Sintomas:**
+```
+❌ Connection failed: libtommath.so.0: cannot open shared object file
+```
+
+**Soluções:**
+1. Usar a imagem oficial mais recente:
+   ```bash
+   docker pull ghcr.io/marcelofmatos/mcp-server-firebird:latest
+   ```
+2. Se persistir, reportar issue no GitHub
+
+## 📊 Exemplos de Uso
+
+### Exemplo 1: Teste de Conectividade
 ```bash
-# SELECT simples
-curl -X POST http://localhost:3000/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "SELECT COUNT(*) as TOTAL FROM USUARIOS"}'
+# Iniciar container
+docker run -d \
+  --name firebird-test \
+  -e FIREBIRD_HOST=192.168.1.100 \
+  -e FIREBIRD_DATABASE=/dados/teste.fdb \
+  -e FIREBIRD_PASSWORD=123456 \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
 
-# SELECT com parâmetros
-curl -X POST http://localhost:3000/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "SELECT * FROM PRODUTOS WHERE CATEGORIA = ?", "params": ["ELETRONICOS"]}'
+# Verificar logs
+docker logs firebird-test
 
-# INSERT
-curl -X POST http://localhost:3000/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "INSERT INTO USUARIOS (NOME, EMAIL) VALUES (?, ?)", "params": ["Novo User", "novo@email.com"]}'
+# Resultado esperado:
+# [MCP-FIREBIRD] ✅ Database connection OK - Firebird 3.0.x
 ```
 
-### 4. Usando Python
-```python
-import requests
-
-# Conectar ao servidor MCP
-base_url = "http://localhost:3000"
-
-# Verificar saúde
-health = requests.get(f"{base_url}/health").json()
-print(f"Status: {health['status']}")
-
-# Executar query
-query_data = {
-    "sql": "SELECT * FROM USUARIOS WHERE ID = ?",
-    "params": [1]
-}
-result = requests.post(f"{base_url}/query", json=query_data).json()
-
-if result['success']:
-    print("Dados:", result['data'])
-else:
-    print("Erro:", result['error'])
-```
-
-## Monitoramento e Logs
-
-### Visualizar Logs
-```bash
-# Logs do container
-docker-compose logs -f mcp-server
-
-# Logs em tempo real
-docker logs -f mcp-firebird-server
-```
-
-### Métricas de Health Check
-O servidor fornece health checks automáticos que podem ser monitorados por:
-- Docker health checks
-- Kubernetes liveness/readiness probes
-- Sistemas de monitoramento (Prometheus, etc.)
-
-## Segurança
-
-### ⚠️ Importantes para Produção
-
-1. **Senhas Seguras**: Use senhas complexas e únicas
-2. **Rede**: Configure firewall para permitir apenas IPs necessários
-3. **HTTPS**: Use proxy reverso com SSL em produção
-4. **Usuário Específico**: Crie usuário dedicado no Firebird com permissões mínimas
-5. **Backup**: Configure backup automático dos dados
-6. **Logs**: Monitore logs de acesso e erros
-
-### Exemplo de Usuário Dedicado no Firebird
+### Exemplo 2: Consulta de Dados
+Use a ferramenta `execute_query` via MCP para:
 ```sql
--- Conectar como SYSDBA e criar usuário específico
-CREATE USER mcp_user PASSWORD 'senha_forte_aqui';
+-- Listar clientes
+SELECT CUSTOMER_ID, COMPANY_NAME, CITY 
+FROM CUSTOMERS 
+WHERE COUNTRY = 'Brasil'
+ORDER BY COMPANY_NAME
 
--- Conceder permissões específicas
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABELA1 TO mcp_user;
-GRANT SELECT ON TABELA2 TO mcp_user;
+-- Contar registros
+SELECT COUNT(*) as TOTAL_CUSTOMERS 
+FROM CUSTOMERS
+
+-- Inserir dados
+INSERT INTO CUSTOMERS (CUSTOMER_ID, COMPANY_NAME, CITY) 
+VALUES ('NEW01', 'Nova Empresa', 'São Paulo')
 ```
 
-## Solução de Problemas
-
-### Problemas Comuns
-
-#### 1. "Connection refused"
-- Verificar se o Firebird está rodando
-- Confirmar host e porta
-- Testar conectividade de rede: `telnet host 3050`
-
-#### 2. "Login failed"
-- Verificar usuário e senha
-- Confirmar se usuário existe no banco
-- Verificar permissões do usuário
-
-#### 3. "Database not found"
-- Confirmar caminho completo do arquivo .fdb
-- Verificar se arquivo existe no servidor
-- Confirmar permissões de acesso ao arquivo
-
-#### 4. "Character set not supported"
-- Ajustar `FIREBIRD_CHARSET` conforme banco
-- Charset comum: UTF8, ISO8859_1, WIN1252
-
-### Comandos de Diagnóstico
-
+### Exemplo 3: Monitoramento
 ```bash
-# Testar conectividade
-docker exec mcp-firebird-server curl -f http://localhost:3000/health
-
-# Ver configuração atual
-docker exec mcp-firebird-server env | grep FIREBIRD
-
-# Entrar no container para debug
-docker exec -it mcp-firebird-server bash
-
-# Verificar logs específicos
-docker exec mcp-firebird-server tail -f /var/log/mcp/server.log
-```
-
-### Performance
-
-Para melhor performance:
-
-1. **Índices**: Certifique-se que consultas frequentes tenham índices
-2. **Connection Pool**: Considere implementar pool de conexões para alta carga
-3. **Cache**: Use cache para consultas que não mudam frequentemente
-4. **Limit**: Use FIRST/SKIP para paginar resultados grandes
-
-## Deployment
-
-### Desenvolvimento Local
-```bash
-docker-compose up -d
-```
-
-### Produção com Docker
-```bash
-# Build da imagem
-docker build -t mcp-firebird-server:1.0 .
-
-# Run em produção
+# Container com restart automático
 docker run -d \
   --name mcp-firebird-prod \
-  -p 3000:3000 \
-  -e FIREBIRD_HOST=prod-db.empresa.com \
-  -e FIREBIRD_DATABASE=/databases/producao.fdb \
-  -e FIREBIRD_USER=mcp_user \
-  -e FIREBIRD_PASSWORD=senha_super_segura \
   --restart unless-stopped \
-  mcp-firebird-server:1.0
+  --health-cmd="python3 -c 'import fdb; print(\"OK\")'" \
+  --health-interval=30s \
+  --health-timeout=10s \
+  --health-retries=3 \
+  -e FIREBIRD_HOST=prod.empresa.com \
+  -e FIREBIRD_DATABASE=/sistema/producao.fdb \
+  -e FIREBIRD_USER=SYS_USER \
+  -e FIREBIRD_PASSWORD="$PROD_PASSWORD" \
+  ghcr.io/marcelofmatos/mcp-server-firebird:latest
+
+# Monitorar health
+docker inspect mcp-firebird-prod | grep -A 5 Health
 ```
 
-### Kubernetes
+## 🐳 Docker Compose
+
+Exemplo de `docker-compose.yml`:
+
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mcp-firebird-server
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: mcp-firebird-server
-  template:
-    metadata:
-      labels:
-        app: mcp-firebird-server
-    spec:
-      containers:
-      - name: mcp-server
-        image: mcp-firebird-server:1.0
-        ports:
-        - containerPort: 3000
-        env:
-        - name: FIREBIRD_HOST
-          value: "firebird-service"
-        - name: FIREBIRD_DATABASE
-          value: "/databases/app.fdb"
-        - name: FIREBIRD_USER
-          valueFrom:
-            secretKeyRef:
-              name: firebird-credentials
-              key: username
-        - name: FIREBIRD_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: firebird-credentials
-              key: password
+version: '3.8'
+
+services:
+  mcp-firebird:
+    image: ghcr.io/marcelofmatos/mcp-server-firebird:latest
+    container_name: mcp-firebird-server
+    restart: unless-stopped
+    environment:
+      - FIREBIRD_HOST=firebird.empresa.com
+      - FIREBIRD_PORT=3050
+      - FIREBIRD_DATABASE=/aplicacao/sistema.fdb
+      - FIREBIRD_USER=APP_USER
+      - FIREBIRD_PASSWORD=senha_segura
+      - FIREBIRD_CHARSET=UTF8
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import fdb; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 ```
 
-## Contribuição
+Executar:
+```bash
+docker-compose up -d
+docker-compose logs -f mcp-firebird
+```
 
-1. Fork o projeto
-2. Crie uma branch para sua feature: `git checkout -b feature/nova-funcionalidade`
-3. Commit suas mudanças: `git commit -am 'Adiciona nova funcionalidade'`
-4. Push para a branch: `git push origin feature/nova-funcionalidade`
-5. Abra um Pull Request
+## 🔧 Desenvolvimento
 
-## Licença
+### Build Local
+```bash
+# Clonar repositório
+git clone https://github.com/marcelofmatos/mcp-server-firebird
+cd mcp-server-firebird
 
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
+# Build da imagem
+docker build -t mcp-firebird-local .
+
+# Testar
+docker run --rm \
+  -e FIREBIRD_HOST=localhost \
+  -e FIREBIRD_DATABASE=/test.fdb \
+  mcp-firebird-local
+```
+
+### Estrutura do Projeto
+```
+mcp-server-firebird/
+├── Dockerfile          # Configuração do container
+├── server.py           # Servidor MCP
+├── README.md           # Esta documentação
+└── .github/
+    └── workflows/
+        └── docker.yml  # CI/CD GitHub Actions
+```
+
+## 📚 Recursos Adicionais
+
+- **Especificação MCP**: [Model Context Protocol](https://spec.modelcontextprotocol.io/)
+- **Documentação Firebird**: [Firebird Documentation](https://firebirdsql.org/en/documentation/)
+- **FDB Python Driver**: [python-fdb](https://github.com/FirebirdSQL/fdb)
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Por favor:
+
+1. Faça fork do repositório
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+## 🆘 Suporte
+
+- **Issues**: [GitHub Issues](https://github.com/marcelofmatos/mcp-server-firebird/issues)
+- **Discussões**: [GitHub Discussions](https://github.com/marcelofmatos/mcp-server-firebird/discussions)
+- **Email**: contato@exemplo.com
+
+---
+
+## 🏷️ Tags da Imagem
+
+- `latest` - Versão mais recente estável
+- `v1.0.0` - Versão específica
+- `dev` - Versão de desenvolvimento
+
+```bash
+# Usar versão específica
+docker pull ghcr.io/marcelofmatos/mcp-server-firebird:v1.0.0
+
+# Usar versão de desenvolvimento
+docker pull ghcr.io/marcelofmatos/mcp-server-firebird:dev
+```
+
+---
+
+**Feito com ❤️ para a comunidade Firebird e MCP**
