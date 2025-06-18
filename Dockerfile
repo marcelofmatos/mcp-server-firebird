@@ -25,13 +25,13 @@ RUN useradd -r -m -s /bin/bash -u 1001 mcp
 # Diretórios de trabalho
 RUN mkdir -p /app/mcp-server /var/log/mcp
 
-# Copiar arquivos de configuração
-COPY mcp-server/ /app/mcp-server/
-
-# Instalar dependências Python
+# Instalar dependências Python primeiro
 COPY requirements.txt /app/mcp-server/
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir -r /app/mcp-server/requirements.txt
+
+# Copiar código do servidor MCP
+COPY server.py /app/mcp-server/
 
 # Configurar permissões
 RUN chown -R mcp:mcp /app/mcp-server /var/log/mcp
