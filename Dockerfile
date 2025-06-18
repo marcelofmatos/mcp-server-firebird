@@ -1,83 +1,200 @@
-# Dockerfile Robusto - MCP Firebird com instalação resiliente
+# Dockerfile Definitivo - MCP Firebird Server
+# Versão completa e funcional para conectar a bancos Firebird externos
 FROM ubuntu:22.04
 
-# Evitar prompts interativos
+# Configuração básica
 ENV DEBIAN_FRONTEND=noninteractive
+LABEL maintainer="MCP Firebird Server"
+LABEL description="MCP Server para Firebird com bibliotecas cliente completas"
+LABEL version="1.0.0"
 
-# Instalar Python e dependências básicas
+# ==========================================
+# FASE 1: INSTALAÇÃO DO SISTEMA BASE
+# ==========================================
+
+# Instalar Python e ferramentas essenciais
 RUN apt-get update && apt-get install -y \
+    # Python e desenvolvimento
     python3 \
     python3-pip \
     python3-dev \
+    python3-venv \
     build-essential \
+    gcc \
+    g++ \
+    make \
+    # Ferramentas de sistema
     wget \
     curl \
-    software-properties-common \
+    unzip \
+    tar \
+    dpkg-dev \
     ca-certificates \
     gnupg \
+    lsb-release \
+    # Bibliotecas de sistema necessárias
+    libc6-dev \
+    libstdc++6 \
+    libgcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Tentar múltiplas formas de instalar Firebird (sem falhar o build)
-RUN echo "🔥 Tentando instalar bibliotecas Firebird..." && \
-    # Método 1: Tentar repositórios padrão
-    (apt-get update && \
-     apt-get install -y firebird3.0-client-core libfbclient2 firebird3.0-common-doc && \
-     echo "✅ Firebird instalado via repositórios padrão") || \
-    # Método 2: Tentar com universe
-    (add-apt-repository universe && \
-     apt-get update && \
-     apt-get install -y firebird3.0-client-core libfbclient2 && \
-     echo "✅ Firebird instalado via repositório universe") || \
-    # Método 3: Instalação manual
-    (echo "📦 Tentando instalação manual..." && \
-     cd /tmp && \
-     wget -q https://github.com/FirebirdSQL/firebird/releases/download/v3.0.10/Firebird-3.0.10.33601-0.amd64.tar.gz && \
-     tar -xzf Firebird-3.0.10.33601-0.amd64.tar.gz && \
-     cd Firebird-*/ && \
-     mkdir -p /usr/lib/firebird/3.0 /usr/include/firebird && \
-     cp lib/libfbclient.so.2.5.9 /usr/lib/firebird/3.0/ && \
-     ln -sf /usr/lib/firebird/3.0/libfbclient.so.2.5.9 /usr/lib/libfbclient.so.2 && \
-     ln -sf /usr/lib/libfbclient.so.2 /usr/lib/libfbclient.so && \
-     cp include/ibase.h /usr/include/firebird/ 2>/dev/null || true && \
-     echo "/usr/lib/firebird/3.0" > /etc/ld.so.conf.d/firebird.conf && \
-     cd / && rm -rf /tmp/Firebird-* && \
-     echo "✅ Firebird instalado manualmente") || \
-    echo "⚠️  Falha na instalação do Firebird - continuando..." && \
-    # Limpeza final
-    rm -rf /var/lib/apt/lists/* /tmp/*
+# ==========================================
+# FASE 2: DEPENDÊNCIAS ESPECÍFICAS DO FIREBIRD
+# ==========================================
 
-# Configurar variáveis de ambiente para Firebird
-ENV LD_LIBRARY_PATH=/usr/lib/firebird/3.0:/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+# Instalar todas as dependências que o Firebird precisa
+RUN apt-get update && apt-get install -y \
+    # Dependências matemáticas (CRÍTICAS para resolver libtommath.so.0)
+    libtommath1 \
+    libtommath-dev \
+    libtomcrypt1 \
+    libtomcrypt-dev \
+    # Bibliotecas de internacionalização
+    libicu70 \
+    libicu-dev \
+    # Bibliotecas de terminal e I/O
+    libncurses5 \
+    libncurses-dev \
+    libedit2 \
+    libedit-dev \
+    # Bibliotecas de threading e atomic
+    libatomic1 \
+    # Outras dependências essenciais
+    libssl3 \
+    libssl-dev \
+    zlib1g \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Atualizar cache das bibliotecas
-RUN ldconfig
+# Criar links simbólicos para garantir que as bibliotecas sejam encontradas
+RUN echo "🔗 Configurando bibliotecas matemáticas..." && \
+    # Encontrar e configurar libtommath
+    TOMMATH_LIB=$(find /usr/lib -name "libtommath.so*" | grep -v ".0" | head -1) && \
+    if [ -n "$TOMMATH_LIB" ]; then \
+        ln -sf "$TOMMATH_LIB" /usr/lib/libtommath.so.0 && \
+        ln -sf "$TOMMATH_LIB" /usr/lib/libtommath.so && \
+        echo "✅ libtommath configurado: $TOMMATH_LIB"; \
+    fi && \
+    # Encontrar e configurar libtomcrypt
+    TOMCRYPT_LIB=$(find /usr/lib -name "libtomcrypt.so*" | grep -v ".0" | head -1) && \
+    if [ -n "$TOMCRYPT_LIB" ]; then \
+        ln -sf "$TOMCRYPT_LIB" /usr/lib/libtomcrypt.so.0 && \
+        ln -sf "$TOMCRYPT_LIB" /usr/lib/libtomcrypt.so && \
+        echo "✅ libtomcrypt configurado: $TOMCRYPT_LIB"; \
+    fi && \
+    # Atualizar cache do sistema
+    ldconfig && \
+    echo "📋 Bibliotecas matemáticas disponíveis:" && \
+    ls -la /usr/lib/libtom* 2>/dev/null
 
-# Verificar o que foi instalado (sem falhar o build)
-RUN echo "📋 Status da instalação Firebird:" && \
-    echo "=== Verificando arquivos instalados ===" && \
-    (ls -la /usr/lib/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/") && \
-    (ls -la /usr/lib/firebird/3.0/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/firebird/3.0/") && \
-    (ls -la /usr/lib/x86_64-linux-gnu/libfbclient* 2>/dev/null || echo "Não encontrado em /usr/lib/x86_64-linux-gnu/") && \
-    echo "=== Verificando ldconfig ===" && \
-    (ldconfig -p | grep fbclient || echo "fbclient não encontrado no cache") && \
-    echo "=== LD_LIBRARY_PATH ===" && \
-    echo "$LD_LIBRARY_PATH" && \
-    echo "=== Instalação completa ==="
+# ==========================================
+# FASE 3: INSTALAÇÃO DO FIREBIRD
+# ==========================================
 
-# Instalar driver Python Firebird
-RUN pip3 install --no-cache-dir fdb==2.0.2
+# Baixar e instalar Firebird extraindo buildroot diretamente
+RUN echo "🔥 === INSTALAÇÃO FIREBIRD OFICIAL ===" && \
+    cd /tmp && \
+    echo "📦 Baixando Firebird 3.0.10 do GitHub..." && \
+    wget -q https://github.com/FirebirdSQL/firebird/releases/download/v3.0.10/Firebird-3.0.10.33601-0.amd64.tar.gz && \
+    echo "📂 Extraindo arquivo..." && \
+    tar -xzf Firebird-3.0.10.33601-0.amd64.tar.gz && \
+    cd Firebird-* && \
+    echo "📋 Conteúdo do pacote Firebird:" && \
+    ls -la && \
+    echo "📦 Extraindo buildroot.tar.gz para /..." && \
+    tar -xzf buildroot.tar.gz -C / && \
+    echo "✅ Buildroot extraído para raiz do sistema" && \
+    # Verificar se a extração funcionou
+    if [ -d "/opt/firebird" ]; then \
+        echo "✅ Diretório /opt/firebird criado com sucesso"; \
+        ls -la /opt/firebird/; \
+    else \
+        echo "⚠️  /opt/firebird não encontrado, procurando bibliotecas..."; \
+        find / -name "*fbclient*" -type f 2>/dev/null | head -5; \
+    fi && \
+    # Limpeza
+    cd / && rm -rf /tmp/Firebird-* && \
+    echo "🔥 === EXTRAÇÃO FIREBIRD CONCLUÍDA ==="
 
-# Testar se FDB funciona (sem falhar o build)
-RUN echo "🐍 Testando FDB Python..." && \
-    (python3 -c "import fdb; print('✅ FDB imported successfully')" || \
-     echo "⚠️  FDB import failed - will be handled at runtime") && \
-    (python3 -c "import ctypes.util; lib = ctypes.util.find_library('fbclient'); print(f'Library path: {lib}' if lib else 'Library not found in standard paths')" || \
-     echo "⚠️  Could not check library path")
+# ==========================================
+# FASE 4: CONFIGURAÇÃO DO AMBIENTE FIREBIRD
+# ==========================================
 
-# Criar usuário não-root
-RUN useradd -r -m mcp
+# Configurar variáveis de ambiente do Firebird
+ENV FIREBIRD=/opt/firebird
+ENV FIREBIRD_HOME=/opt/firebird
+ENV PATH=$FIREBIRD/bin:$PATH
+ENV LD_LIBRARY_PATH=$FIREBIRD/lib:/opt/firebird/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 
-# Configurar diretório de trabalho
+# Criar configuração adicional de bibliotecas
+RUN echo "🔧 Configurando ambiente Firebird..." && \
+    # Criar arquivo de configuração ldconfig
+    echo "/opt/firebird/lib" > /etc/ld.so.conf.d/firebird.conf && \
+    echo "/usr/lib" >> /etc/ld.so.conf.d/firebird.conf && \
+    echo "/usr/lib/x86_64-linux-gnu" >> /etc/ld.so.conf.d/firebird.conf && \
+    # Atualizar cache de bibliotecas
+    ldconfig && \
+    # Verificar se bibliotecas fbclient estão acessíveis
+    echo "📋 Verificando bibliotecas Firebird:" && \
+    find /opt -name "*fbclient*" 2>/dev/null || echo "Nenhuma em /opt" && \
+    find /usr/lib -name "*fbclient*" 2>/dev/null || echo "Nenhuma em /usr/lib" && \
+    ldconfig -p | grep fbclient || echo "fbclient não encontrado no cache" && \
+    echo "✅ Configuração do ambiente concluída"
+
+# Verificação pós-instalação e correção de dependências
+RUN echo "🔍 === VERIFICAÇÃO FINAL FIREBIRD ===" && \
+    # Verificar se libtommath.so.0 está disponível
+    if ! ldconfig -p | grep -q "libtommath.so.0"; then \
+        echo "🔗 Corrigindo libtommath.so.0..."; \
+        TOMMATH=$(find /usr/lib -name "libtommath.so*" | grep -v ".0" | head -1); \
+        if [ -n "$TOMMATH" ]; then \
+            ln -sf "$TOMMATH" /usr/lib/libtommath.so.0; \
+            echo "✅ Link criado: $TOMMATH -> libtommath.so.0"; \
+        fi; \
+    fi && \
+    # Verificar se libtomcrypt.so.0 está disponível
+    if ! ldconfig -p | grep -q "libtomcrypt.so.0"; then \
+        echo "🔗 Corrigindo libtomcrypt.so.0..."; \
+        TOMCRYPT=$(find /usr/lib -name "libtomcrypt.so*" | grep -v ".0" | head -1); \
+        if [ -n "$TOMCRYPT" ]; then \
+            ln -sf "$TOMCRYPT" /usr/lib/libtomcrypt.so.0; \
+            echo "✅ Link criado: $TOMCRYPT -> libtomcrypt.so.0"; \
+        fi; \
+    fi && \
+    # Atualizar ldconfig uma última vez
+    ldconfig && \
+    echo "📋 Status final das dependências:" && \
+    ldconfig -p | grep -E "(fbclient|tommath|tomcrypt)" && \
+    echo "🔍 === VERIFICAÇÃO CONCLUÍDA ==="
+
+# ==========================================
+# FASE 5: INSTALAÇÃO DO PYTHON FDB
+# ==========================================
+
+# Atualizar pip e instalar FDB
+RUN echo "🐍 === INSTALAÇÃO FDB PYTHON ===" && \
+    pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir fdb==2.0.2 && \
+    echo "✅ FDB instalado com sucesso"
+
+# Teste completo do FDB com diagnósticos
+RUN echo "🧪 === TESTE FDB E DEPENDÊNCIAS ===" && \
+    echo "1. Testando importação do FDB..." && \
+    (python3 -c "import fdb; print('✅ FDB importado com sucesso')" || \
+     echo "❌ Falha na importação do FDB") && \
+    echo "2. Testando localização de biblioteca fbclient..." && \
+    (python3 -c "import ctypes.util; lib = ctypes.util.find_library('fbclient'); print(f'✅ fbclient encontrado: {lib}' if lib else '❌ fbclient não encontrado')" || \
+     echo "❌ Erro na verificação de biblioteca") && \
+    echo "🧪 === TESTE CONCLUÍDO ==="
+
+# ==========================================
+# FASE 6: CONFIGURAÇÃO DA APLICAÇÃO
+# ==========================================
+
+# Criar usuário não-root para segurança
+RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /bin/bash mcp
+
+# Configurar diretório da aplicação
 WORKDIR /app
 COPY server.py .
 
@@ -85,13 +202,26 @@ COPY server.py .
 RUN chown -R mcp:mcp /app
 USER mcp
 
-# Variáveis de ambiente para banco externo
+# ==========================================
+# FASE 7: CONFIGURAÇÃO FINAL
+# ==========================================
+
+# Variáveis de ambiente para conexão com banco externo
 ENV FIREBIRD_HOST=192.168.1.100
 ENV FIREBIRD_PORT=3050
 ENV FIREBIRD_DATABASE=/dados/sistema.fdb
 ENV FIREBIRD_USER=SYSDBA
 ENV FIREBIRD_PASSWORD=masterkey
 ENV FIREBIRD_CHARSET=UTF8
+
+# Configurações do MCP Server
+ENV MCP_SERVER_NAME="firebird-mcp-server"
+ENV MCP_SERVER_VERSION="1.0.0"
+ENV LOG_LEVEL=INFO
+
+# Health check para verificar se o servidor está funcionando
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python3 -c "import fdb; print('OK')" || exit 1
 
 # Comando de execução
 CMD ["python3", "server.py"]
