@@ -1,0 +1,22 @@
+{
+    "mcpServers": {
+      "firebird-database-dev": {
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "--network", "host",
+          "-e", "FIREBIRD_HOST=firebird_server",
+          "-e", "FIREBIRD_PORT=3050",
+          "-e", "FIREBIRD_DATABASE=/var/lib/firebird/data/database.fdb",
+          "-e", "FIREBIRD_USER=SYSDBA",
+          "-e", "FIREBIRD_PASSWORD=masterkey",
+          "-e", "FIREBIRD_CHARSET=UTF8",
+          "-e", "MCP_SERVER_PORT=3000",
+          "ghcr.io/marcelofmatos/mcp-server-firebird:latest"
+        ]
+      }
+    }
+  }
+  
