@@ -6,8 +6,8 @@ on:
       - 'main'
       - 'homolog'
       - 'prod'
-    # tags:
-    #   - '**'
+    tags:
+      - '**'
   release:
     types: [published]
   workflow_dispatch:
