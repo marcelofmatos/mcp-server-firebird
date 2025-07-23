@@ -1,0 +1,248 @@
+{
+  "server_info": {
+    "description": "Servidor MCP Especialista em Firebird - Conexão Externa",
+    "subtitle": "Servidor robusto para conectar a bancos Firebird externos",
+    "details": "Oferece assistência especializada e diagnósticos detalhados",
+    "name": "firebird-expert-server",
+    "starting": "=== SERVIDOR MCP ESPECIALISTA FIREBIRD INICIANDO ===",
+    "ready": "=== SERVIDOR MCP ESPECIALISTA FIREBIRD PRONTO ===",
+    "starting_server": "=== INICIANDO SERVIDOR ESPECIALISTA FIREBIRD ===",
+    "initialized": "MCP Server inicializado",
+    "waiting": "MCP Server pronto - aguardando requisições",
+    "interrupted": "Servidor interrompido",
+    "shutting_down": "Servidor finalizando",
+    "error_handling": "Erro processando requisição",
+    "invalid_json": "JSON inválido",
+    "error_processing": "Erro processando requisição",
+    "server_error": "Erro do servidor"
+  },
+  "connection": {
+    "target_database": "Banco de destino",
+    "dsn_configured": "DSN configurado",
+    "attempting": "Tentando conexão para",
+    "successful": "Conexão bem-sucedida!",
+    "failed": "Falha na conexão",
+    "test_results": "Resultados do Teste de Conexão",
+    "testing": "=== TESTANDO CONEXÃO COM BANCO ===",
+    "skipping_test": "=== PULANDO TESTE DE CONEXÃO ===",
+    "ready_queries": "Pronto para executar consultas SQL no banco Firebird externo",
+    "ready_assistance": "Pronto para fornecer assistência especializada em Firebird"
+  },
+  "libraries": {
+    "checking": "=== VERIFICANDO COMPONENTES FIREBIRD ===",
+    "fdb_loaded": "Biblioteca Python FDB carregada com sucesso",
+    "fdb_version": "Versão FDB",
+    "fdb_available": "Biblioteca Python FDB: Disponível",
+    "fdb_not_available": "Biblioteca Python FDB: Não disponível",
+    "fdb_error": "Erro",
+    "client_found": "Biblioteca cliente Firebird encontrada",
+    "client_not_found": "Bibliotecas cliente Firebird não encontradas nos caminhos padrão",
+    "client_alternative": "Encontrada biblioteca cliente Firebird em caminho alternativo",
+    "client_available": "Bibliotecas cliente Firebird: Disponível",
+    "client_not_available": "Bibliotecas cliente Firebird: Não encontradas",
+    "client_location": "Localização da biblioteca cliente",
+    "library_check_failed": "Verificação de caminho da biblioteca falhou",
+    "no_client_found": "Nenhuma biblioteca cliente Firebird encontrada em nenhum local padrão",
+    "expected_locations": "Locais esperados",
+    "limited_functionality": "Funcionalidade limitada - componentes Firebird ausentes",
+    "installation_instructions": "Ferramentas mostrarão instruções de instalação/configuração"
+  },
+  "environment": {
+    "info": "=== INFORMAÇÕES DO AMBIENTE ===",
+    "target_host": "Host de destino",
+    "target_database": "Banco de destino",
+    "user": "Usuário",
+    "charset": "Charset",
+    "not_set": "não definido"
+  },
+  "tools": {
+    "available": "Ferramentas disponíveis",
+    "test_connection": {
+      "name": "test_connection",
+      "description": "Testar conexão com banco Firebird externo com diagnósticos detalhados"
+    },
+    "execute_query": {
+      "name": "execute_query", 
+      "description": "Executar consulta SQL no banco Firebird externo (SELECT, INSERT, UPDATE, DELETE)",
+      "sql_description": "Consulta SQL para executar",
+      "params_description": "Parâmetros opcionais para consultas parametrizadas"
+    },
+    "list_tables": {
+      "name": "list_tables",
+      "description": "Listar todas as tabelas de usuário no banco Firebird externo"
+    },
+    "server_status": {
+      "name": "server_status",
+      "description": "Obter status completo do servidor, informações de biblioteca e diagnósticos de conexão"
+    },
+    "query_results": "Resultados da Consulta",
+    "database_tables": "Tabelas do Banco",
+    "server_status_title": "Status Completo do Servidor",
+    "sql_required": "Consulta SQL é obrigatória",
+    "unknown_tool": "Ferramenta desconhecida",
+    "error_executing": "Erro executando"
+  },
+  "prompts": {
+    "available": "Prompts especialistas disponíveis",
+    "firebird_expert": {
+      "name": "firebird_expert",
+      "description": "Assistente especialista em Firebird com conhecimento profundo do SGBD",
+      "operation_type": "Tipo de operação SQL (select, insert, update, delete, ddl, admin)",
+      "table_context": "Nome da tabela ou contexto específico",
+      "complexity_level": "Nível de complexidade desejado (basic, intermediate, advanced)"
+    },
+    "firebird_performance": {
+      "name": "firebird_performance", 
+      "description": "Especialista em otimização e performance para Firebird",
+      "query_type": "Tipo de consulta a otimizar (simple, complex, reporting, oltp)",
+      "focus_area": "Área de foco (indexes, joins, transactions, memory)"
+    },
+    "firebird_architecture": {
+      "name": "firebird_architecture",
+      "description": "Especialista em arquitetura e administração Firebird", 
+      "topic": "Tópico de interesse (backup, security, monitoring, maintenance)",
+      "version_focus": "Versão específica do Firebird (2.5, 3.0, 4.0, 5.0)"
+    },
+    "unknown_prompt": "Prompt desconhecido",
+    "error_generating": "Erro ao gerar prompt"
+  },
+  "prompt_templates": {
+    "firebird_expert": {
+      "title": "## Especialista Firebird - Assistente Técnico",
+      "intro": "Você é um especialista técnico em Firebird RDBMS com conhecimento profundo de todas as versões e recursos.",
+      "environment_config": "### Configuração do Ambiente:",
+      "guidelines": "### Diretrizes para {operation_type}:",
+      "complexity_level": "Nível de complexidade ({complexity_level})",
+      "specific_guidance": "Orientações específicas",
+      "firebird_expertise": "### Expertise Firebird:",
+      "sql_syntax": "**Sintaxe SQL**: Dialetos 1 e 3, recursos específicos do Firebird",
+      "performance": "**Performance**: Índices, estatísticas, planos de execução, otimização",
+      "transactions": "**Transações**: Isolamento, concorrência, deadlocks, performance",
+      "stored_procedures": "**Stored Procedures**: PSQL, triggers, funções, pacotes (FB 4.0+)",
+      "administration": "**Administração**: Backup/restore, segurança, monitoramento, manutenção",
+      "architecture": "**Arquitetura**: Classic, SuperServer, SuperClassic, Embedded",
+      "advanced_features": "### Recursos Avançados:",
+      "window_functions": "**Window Functions** (FB 3.0+)",
+      "cte": "**Common Table Expressions (CTE)**",
+      "merge": "**Merge Statement**",
+      "temp_tables": "**Global Temporary Tables**",
+      "partial_indexes": "**Índices Parciais**",
+      "expression_indexes": "**Índices de Expressão**",
+      "computed_columns": "**Colunas Computadas**",
+      "generators": "**Generators/Sequences**",
+      "response_approach": "### Abordagem de Resposta:",
+      "explain_context": "- Explique o contexto técnico das soluções",
+      "mention_alternatives": "- Mencione alternativas quando relevante",
+      "performance_impact": "- Indique impactos de performance",
+      "version_compatibility": "- Considere compatibilidade entre versões",
+      "practical_examples": "- Forneça exemplos práticos e funcionais",
+      "highlight_pitfalls": "- Destaque possíveis armadilhas ou limitações",
+      "available_tables": "Tabelas disponíveis no banco"
+    },
+    "firebird_performance": {
+      "title": "## Especialista em Performance Firebird",
+      "intro": "Especialista focado em otimização e tuning de performance para Firebird RDBMS.",
+      "focus_queries": "### Foco em Consultas {query_type}:",
+      "specialization": "### Área de Especialização - {focus_area}:",
+      "analysis_tools": "### Ferramentas de Análise:",
+      "plan_comment": "-- Analisar plano de execução",
+      "monitor_comment": "-- Monitorar performance em tempo real",
+      "statistics_comment": "-- Estatísticas de tabelas e índices",
+      "methodology": "### Metodologia de Otimização:",
+      "analysis": "**Análise**: Identificar gargalos com tabelas MON$ e PLAN",
+      "indexes": "**Índices**: Criar índices baseados em padrões de acesso",
+      "rewrite": "**Reescrita**: Otimizar SQL considerando o otimizador do Firebird",
+      "test": "**Teste**: Validar melhorias com dados reais",
+      "monitor": "**Monitoramento**: Acompanhar performance em produção",
+      "important_metrics": "### Métricas Importantes:",
+      "selectivity": "**Seletividade**: Quanto menor, melhor para índices",
+      "page_reads": "**Leituras de Página**: Minimizar leituras físicas",
+      "memory_usage": "**Uso de Memória**: Otimizar uso de cache",
+      "lock_conflicts": "**Conflitos de Lock**: Reduzir contenção",
+      "garbage_collection": "**Garbage Collection**: Manter estatísticas atualizadas",
+      "best_practices": "### Boas Práticas:",
+      "prepared_statements": "- Use prepared statements",
+      "update_statistics": "- Mantenha estatísticas atualizadas", 
+      "monitor_growth": "- Monitore crescimento de tabelas",
+      "archiving": "- Implemente archiving para dados históricos",
+      "configure_buffers": "- Configure adequadamente page_size e page_buffers"
+    },
+    "firebird_architecture": {
+      "title": "## Especialista em Arquitetura Firebird",
+      "intro": "Especialista em administração de sistemas e arquitetura Firebird empresarial.",
+      "focus_topic": "### Foco em {topic}:",
+      "version_info": "### Firebird Versão {version_focus}:",
+      "server_architectures": "### Arquiteturas de Servidor:",
+      "classic": "**Classic**: Um processo por conexão, maior isolamento",
+      "superserver": "**SuperServer**: Thread por conexão, compartilha cache",
+      "superclassic": "**SuperClassic**: Híbrido, processos workers compartilhados",
+      "embedded": "**Embedded**: Biblioteca integrada, single-user",
+      "critical_configs": "### Configurações Críticas:",
+      "config_comment": "# firebird.conf parâmetros principais",
+      "essential_monitoring": "### Monitoramento Essencial:",
+      "active_connections": "-- Conexões ativas",
+      "long_transactions": "-- Transações longas (problema comum)",
+      "memory_usage": "-- Uso de memória",
+      "io_stats": "-- Estatísticas I/O",
+      "operational_practices": "### Práticas Operacionais:",
+      "regular_backup": "**Backup regular**: Múltiplas estratégias (gbak + nbackup)",
+      "proactive_monitoring": "**Monitoramento proativo**: Scripts automatizados",
+      "preventive_maintenance": "**Manutenção preventiva**: Sweep, rebuild, statistics",
+      "security": "**Segurança**: Princípio do menor privilégio",
+      "documentation": "**Documentação**: Mudanças, configurações, procedimentos",
+      "disaster_recovery": "**Disaster Recovery**: Testes regulares de restore",
+      "troubleshooting": "### Troubleshooting:",
+      "analyze_logs": "- Analise logs de erro do Firebird",
+      "check_corruption": "- Verifique corrupção com gfix -validate",
+      "monitor_temp_files": "- Monitore crescimento de temporary files",
+      "track_transactions": "- Acompanhe long-running transactions",
+      "investigate_deadlocks": "- Investigue deadlocks e lock conflicts"
+    }
+  },
+  "complexity_levels": {
+    "basic": "Foque em clareza e simplicidade, evite recursos avançados",
+    "intermediate": "Use recursos padrão do Firebird, otimizações básicas, boas práticas",
+    "advanced": "Explore recursos avançados, otimizações complexas, técnicas especializadas"
+  },
+  "operation_guidance": {
+    "select": "Otimize com índices, use FIRST/SKIP para paginação, considere PLAN para queries complexas",
+    "insert": "Valide constraints, use transações explícitas, considere RETURNING para obter ID gerado",
+    "update": "Use WHERE específico, considere impacto em triggers, backup antes de operações em massa",
+    "delete": "CUIDADO: sempre use WHERE, considere soft delete, backup obrigatório para operações críticas",
+    "ddl": "Analise dependências, use transações DDL quando apropriado, documente mudanças estruturais",
+    "admin": "Foque em segurança, performance, monitoramento e manutenção preventiva"
+  },
+  "query_optimizations": {
+    "simple": "Índices básicos, seletividade, evitar funções em WHERE",
+    "complex": "JOINs eficientes, subconsultas vs EXISTS, CTEs, window functions", 
+    "reporting": "Agregações otimizadas, índices compostos, views materializadas",
+    "oltp": "Concorrência, transações curtas, índices únicos, prepared statements"
+  },
+  "focus_techniques": {
+    "indexes": "Análise de seletividade, índices compostos, parciais, de expressão",
+    "joins": "Ordem de JOIN, tipos de JOIN, índices de suporte",
+    "transactions": "Níveis de isolamento, snapshot, read committed, lock resolution",
+    "memory": "Page buffers, sort memory, cache hit ratio, garbage collection"
+  },
+  "architecture_topics": {
+    "backup": "Estratégias gbak, nbackup, streaming replication, procedimentos de recovery",
+    "security": "Usuários, roles, grants, SSL/TLS, plugins de autenticação",
+    "monitoring": "Tabelas MON$, trace API, contadores de performance, alertas",
+    "maintenance": "Sweep, garbage collection, rebuild indexes, reparo de banco"
+  },
+  "version_features": {
+    "2.5": "Última versão clássica, estável, CTE, MERGE, regex",
+    "3.0": "Window functions, tipo Boolean, colunas Identity, packages",
+    "4.0": "Pacotes SQL, fusos horários, nomes de metadados mais longos, DECIMAL(34)",
+    "5.0": "Operações paralelas, índices parciais, WHEN NOT MATCHED BY SOURCE"
+  },
+  "errors": {
+    "fdb_not_available": "Biblioteca FDB não disponível",
+    "client_not_available": "Bibliotecas cliente Firebird não disponíveis",
+    "connection_failed": "Falha na conexão",
+    "query_failed": "Consulta falhou",
+    "tables_failed": "Listar tabelas falhou",
+    "method_not_found": "Método não encontrado",
+    "notification_received": "Notificação initialized recebida"
+  }
+}
