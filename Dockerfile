@@ -197,7 +197,7 @@ RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /bin/bash mcp
 # Configurar diretório da aplicação
 WORKDIR /app
 COPY server.py .
-COPY i18n/ .
+COPY i18n/ i18n/
 
 # Configurar permissões
 RUN chown -R mcp:mcp /app
