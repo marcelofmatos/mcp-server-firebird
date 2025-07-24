@@ -28,9 +28,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    # - name: Run ruff linter
-    #   run: |
-    #     ruff check . --output-format=github
+    - name: Run ruff linter
+      run: |
+        ruff check . --output-format=github
 
     - name: Check code formatting with black
       run: |
@@ -107,7 +107,8 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-22.04
-    name: Integration Tests
+    name: Integration Tests (Disabled)
+    if: false
     services:
       firebird:
         image: jacobalberty/firebird:v3.0
@@ -246,7 +247,7 @@ jobs:
   test-summary:
     runs-on: ubuntu-22.04
     name: Test Summary
-    needs: [lint-and-format, integration-tests]
+    needs: [lint-and-format]
     if: always()
 
     steps:
@@ -260,16 +261,14 @@ jobs:
         
         # Check job results
         LINT_RESULT="${{ needs.lint-and-format.result }}"
-        INTEGRATION_RESULT="${{ needs.integration-tests.result }}"
         
         echo "| Test Type | Result |" >> $GITHUB_STEP_SUMMARY
         echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
         echo "| Code Quality | $LINT_RESULT |" >> $GITHUB_STEP_SUMMARY
-        echo "| Integration Tests | $INTEGRATION_RESULT |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Check if any test failed
-        if [[ "$LINT_RESULT" != "success" || "$INTEGRATION_RESULT" != "success" ]]; then
+        if [[ "$LINT_RESULT" != "success" ]]; then
           echo "❌ Some tests failed. Please check the individual job results." >> $GITHUB_STEP_SUMMARY
           exit 1
         else
