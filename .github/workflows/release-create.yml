@@ -20,11 +20,14 @@ on:
 
 permissions:
   contents: write
+  actions: write
+  packages: write
   pull-requests: read
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    environment: production
     
     steps:
       - name: Checkout
@@ -167,7 +170,7 @@ jobs:
             --latest \
             $PRERELEASE_FLAG
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
 
       - name: Update package.json
         shell: bash
