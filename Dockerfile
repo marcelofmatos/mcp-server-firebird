@@ -2,6 +2,12 @@
 # Versão completa e funcional para conectar a bancos Firebird externos
 FROM ubuntu:22.04
 
+# Definir variáveis de build
+ARG APP_VERSION
+ARG GIT_COMMIT
+ENV APP_VERSION=${APP_VERSION}
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 # Configuração básica
 ENV DEBIAN_FRONTEND=noninteractive
 LABEL maintainer="MCP Firebird Server"
