@@ -9,7 +9,7 @@ on:
     tags:
       - '**'
   release:
-    types: [published]
+    types: [released]
   workflow_dispatch:
 
 jobs:
