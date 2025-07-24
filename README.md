@@ -717,7 +717,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 - `latest` - Versão mais recente estável
 - `v1.0.0` - Versão específica
-- `dev` - Versão de desenvolvimento
+- `main` - Versão de desenvolvimento
 
 ```bash
 # Usar versão específica
