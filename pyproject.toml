@@ -58,7 +58,7 @@ docs = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["server*", "src*"]
+include = ["server*"]
 exclude = ["tests*"]
 
 # Black configuration
@@ -202,7 +202,6 @@ exclude = [
 ]
 
 # Same as Black.
-line-length = 88
 indent-width = 4
 
 [tool.ruff.mccabe]
@@ -253,7 +252,6 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--cov=server",
-    "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
@@ -278,7 +276,7 @@ filterwarnings = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["server.py", "src"]
+source = ["server.py"]
 omit = [
     "tests/*",
     "venv/*",
@@ -339,10 +337,10 @@ commands =
     ruff check .
     black --check .
     mypy .
-    bandit -r server.py src -f json -o bandit-report.json
+    bandit -r server.py -f json -o bandit-report.json
 
 [testenv:coverage]
 deps = -r{toxinidir}/requirements-dev.txt
 commands = 
-    pytest --cov=server --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml
+    pytest --cov=server --cov-report=term-missing --cov-report=html --cov-report=xml
 """
