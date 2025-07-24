@@ -721,10 +721,10 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 ```bash
 # Usar versão específica
-docker pull ghcr.io/marcelofmatos/mcp-server-firebird:v1.0.0
+docker pull ghcr.io/marcelofmatos/mcp-server-firebird:1.0.0
 
 # Usar versão de desenvolvimento
-docker pull ghcr.io/marcelofmatos/mcp-server-firebird:dev
+docker pull ghcr.io/marcelofmatos/mcp-server-firebird:main
 ```
 
 ---
