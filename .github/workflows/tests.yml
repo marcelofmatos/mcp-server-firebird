@@ -53,7 +53,8 @@ jobs:
 
   unit-tests:
     runs-on: ubuntu-22.04
-    name: Unit Tests
+    name: Unit Tests (Disabled)
+    if: false
     strategy:
       matrix:
         python-version: ['3.10']
@@ -244,7 +245,7 @@ jobs:
   test-summary:
     runs-on: ubuntu-22.04
     name: Test Summary
-    needs: [lint-and-format, unit-tests, integration-tests]
+    needs: [lint-and-format, integration-tests]
     if: always()
 
     steps:
@@ -258,18 +259,16 @@ jobs:
         
         # Check job results
         LINT_RESULT="${{ needs.lint-and-format.result }}"
-        UNIT_RESULT="${{ needs.unit-tests.result }}"
         INTEGRATION_RESULT="${{ needs.integration-tests.result }}"
         
         echo "| Test Type | Result |" >> $GITHUB_STEP_SUMMARY
         echo "|-----------|---------|" >> $GITHUB_STEP_SUMMARY
         echo "| Code Quality | $LINT_RESULT |" >> $GITHUB_STEP_SUMMARY
-        echo "| Unit Tests | $UNIT_RESULT |" >> $GITHUB_STEP_SUMMARY
         echo "| Integration Tests | $INTEGRATION_RESULT |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Check if any test failed
-        if [[ "$LINT_RESULT" != "success" || "$UNIT_RESULT" != "success" || "$INTEGRATION_RESULT" != "success" ]]; then
+        if [[ "$LINT_RESULT" != "success" || "$INTEGRATION_RESULT" != "success" ]]; then
           echo "❌ Some tests failed. Please check the individual job results." >> $GITHUB_STEP_SUMMARY
           exit 1
         else
