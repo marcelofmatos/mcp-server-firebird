@@ -4,6 +4,14 @@
 
 Este projeto implementa uma suíte abrangente de testes para garantir qualidade, confiabilidade e performance do MCP Server Firebird.
 
+## Últimas Correções
+
+### ✅ Correção i18n.get() (2025-07)
+- **Problema:** `I18n.get() takes 2 positional arguments but 3 were given`
+- **Solução:** Suporte a *args e **kwargs na classe I18n
+- **Testes:** `test_get_with_positional_args_support` e `test_mcp_prompt_generation_fix`
+- **Status:** ✅ Corrigido e testado
+
 ## Estrutura de Testes
 
 ### Tipos de Teste

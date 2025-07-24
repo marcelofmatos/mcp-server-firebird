@@ -84,7 +84,7 @@ class I18n:
             }
         }
     
-    def get(self, key_path: str, **kwargs) -> str:
+    def get(self, key_path: str, *args, **kwargs) -> str:
         """Get localized string by dot-separated key path"""
         try:
             keys = key_path.split('.')
@@ -92,11 +92,15 @@ class I18n:
             for key in keys:
                 value = value[key]
             
-            # Format string with provided arguments
-            if kwargs:
-                return value.format(**kwargs)
+            # Handle both *args and **kwargs for backward compatibility
+            if args or kwargs:
+                # If args are provided, assume they are format arguments
+                if args:
+                    return value.format(*args)
+                elif kwargs:
+                    return value.format(**kwargs)
             return value
-        except (KeyError, TypeError):
+        except (KeyError, TypeError, IndexError):
             log(f"⚠️  Missing translation key: {key_path}")
             return key_path  # Return key as fallback
 

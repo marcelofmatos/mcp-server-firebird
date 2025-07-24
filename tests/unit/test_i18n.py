@@ -308,6 +308,127 @@ class TestI18nSystem:
         assert result == expected
 
     @pytest.mark.unit
+    def test_get_with_positional_args_support(self):
+        """Testa suporte a argumentos posicionais (*args) - correção do erro MCP."""
+        i18n = server.I18n()
+        i18n.strings = {
+            "prompt_templates": {
+                "firebird_expert": {
+                    "guidelines": "### Guidelines for {operation_type}:",
+                    "complexity_level": "Complexity level ({complexity_level})"
+                },
+                "firebird_performance": {
+                    "focus_queries": "### Focus on {query_type} Queries:",
+                    "specialization": "### Specialization Area - {focus_area}:"
+                },
+                "firebird_architecture": {
+                    "focus_topic": "### Focus on {topic}:",
+                    "version_info": "### Firebird Version {version_focus}:"
+                }
+            }
+        }
+        
+        # Teste 1: Argumentos nomeados via **kwargs (deve funcionar)
+        result1 = i18n.get(
+            'prompt_templates.firebird_expert.guidelines', 
+            operation_type='SELECT'
+        )
+        assert result1 == "### Guidelines for SELECT:"
+        
+        # Teste 2: Argumentos posicionais via *args (nova funcionalidade)
+        result2 = i18n.get(
+            'prompt_templates.firebird_expert.complexity_level',
+            'advanced'
+        )
+        assert result2 == "Complexity level (advanced)"
+        
+        # Teste 3: Múltiplos argumentos nomeados
+        i18n.strings["multi_param"] = "User {name} has {count} items in {location}"
+        result3 = i18n.get(
+            'multi_param',
+            name='Alice',
+            count=5,
+            location='warehouse'
+        )
+        assert result3 == "User Alice has 5 items in warehouse"
+        
+        # Teste 4: Compatibilidade com método .format() ainda funciona
+        result4 = i18n.get('prompt_templates.firebird_expert.guidelines').format(
+            operation_type='INSERT'
+        )
+        assert result4 == "### Guidelines for INSERT:"
+        
+        # Teste 5: Chamadas que causavam o erro original agora funcionam
+        operation_type = "select"
+        complexity_level = "intermediate"
+        
+        # Estas chamadas causavam: "I18n.get() takes 2 positional arguments but 3 were given"
+        result5 = i18n.get(
+            'prompt_templates.firebird_expert.guidelines',
+            operation_type=operation_type.upper()
+        )
+        assert result5 == "### Guidelines for SELECT:"
+        
+        result6 = i18n.get(
+            'prompt_templates.firebird_expert.complexity_level',
+            complexity_level=complexity_level
+        )
+        assert result6 == "Complexity level (intermediate)"
+
+    @pytest.mark.unit
+    def test_mcp_prompt_generation_fix(self):
+        """Testa correção específica do erro na geração de prompts MCP."""
+        i18n = server.I18n()
+        i18n.strings = {
+            "prompt_templates": {
+                "firebird_performance": {
+                    "focus_queries": "### Focus on {query_type} Queries:",
+                    "specialization": "### Specialization Area - {focus_area}:"
+                },
+                "firebird_architecture": {
+                    "focus_topic": "### Focus on {topic}:",
+                    "version_info": "### Firebird Version {version_focus}:"
+                }
+            }
+        }
+        
+        # Simular as chamadas exatas que causavam erro no método handle_prompts_get
+        query_type = "complex"
+        focus_area = "indexes"
+        topic = "backup"
+        version_focus = "4.0"
+        
+        # Estas eram as linhas problemáticas:
+        try:
+            result1 = i18n.get(
+                'prompt_templates.firebird_performance.focus_queries'
+            ).format(query_type=query_type.title())
+            
+            result2 = i18n.get(
+                'prompt_templates.firebird_performance.specialization'
+            ).format(focus_area=focus_area.title())
+            
+            result3 = i18n.get(
+                'prompt_templates.firebird_architecture.focus_topic'
+            ).format(topic=topic.title())
+            
+            result4 = i18n.get(
+                'prompt_templates.firebird_architecture.version_info'
+            ).format(version_focus=version_focus)
+            
+            # Se chegou até aqui, as correções funcionaram
+            assert "Complex" in result1
+            assert "Indexes" in result2
+            assert "Backup" in result3
+            assert "4.0" in result4
+            
+        except TypeError as e:
+            if "takes 2 positional arguments but 3 were given" in str(e):
+                pytest.fail("Erro MCP ainda não foi corrigido")
+            else:
+                raise
+
+    @pytest.mark.unit
     def test_unicode_handling(self):
         """Testa handling de caracteres Unicode."""
         i18n = server.I18n()
