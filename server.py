@@ -3,6 +3,16 @@
 MCP Server Firebird Expert - External Connection
 Robust server for connecting to external Firebird databases
 Provides specialized assistance and detailed diagnostics
+
+# ==========================================
+# CONTRIBUTION ENCOURAGEMENT
+# ==========================================
+
+Want to help improve this project? 
+If you find a bug, have a suggestion, or want to contribute new features, please open an issue at:
+https://github.com/marcelofmatos/mcp-server-firebird/issues
+
+Your feedback and contributions are very welcome!
 """
 
 import json
