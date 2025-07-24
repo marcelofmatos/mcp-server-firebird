@@ -594,8 +594,8 @@ class MCPServer:
 - **User**: {DB_CONFIG['user']}
 - **Charset**: {DB_CONFIG['charset']}
 
-{i18n.get('prompt_templates.firebird_expert.guidelines', operation_type=operation_type.upper())}
-**{i18n.get('prompt_templates.firebird_expert.complexity_level', complexity_level=complexity_level)}**: {complexity_guidance}
+{i18n.get('prompt_templates.firebird_expert.guidelines').format(operation_type=operation_type.upper())}
+**{i18n.get('prompt_templates.firebird_expert.complexity_level').format(complexity_level=complexity_level)}**: {complexity_guidance}
 **{i18n.get('prompt_templates.firebird_expert.specific_guidance')}**: {operation_guidance}
 
 {i18n.get('prompt_templates.firebird_expert.firebird_expertise')}
@@ -636,10 +636,10 @@ class MCPServer:
 
 {i18n.get('prompt_templates.firebird_performance.intro')}
 
-{i18n.get('prompt_templates.firebird_performance.focus_queries', query_type=query_type.title())}
+{i18n.get('prompt_templates.firebird_performance.focus_queries').format(query_type=query_type.title())}
 {query_optimization}
 
-{i18n.get('prompt_templates.firebird_performance.specialization', focus_area=focus_area.title())}
+{i18n.get('prompt_templates.firebird_performance.specialization').format(focus_area=focus_area.title())}
 {focus_technique}
 
 {i18n.get('prompt_templates.firebird_performance.analysis_tools')}
@@ -691,10 +691,10 @@ SELECT * FROM RDB$INDEX_STATISTICS;
 
 {i18n.get('prompt_templates.firebird_architecture.intro')}
 
-{i18n.get('prompt_templates.firebird_architecture.focus_topic', topic=topic.title())}
+{i18n.get('prompt_templates.firebird_architecture.focus_topic').format(topic=topic.title())}
 {architecture_topic}
 
-{i18n.get('prompt_templates.firebird_architecture.version_info', version_focus=version_focus)}
+{i18n.get('prompt_templates.firebird_architecture.version_info').format(version_focus=version_focus)}
 {version_feature}
 
 {i18n.get('prompt_templates.firebird_architecture.server_architectures')}
