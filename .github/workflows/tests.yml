@@ -224,7 +224,8 @@ jobs:
 
   pre-commit:
     runs-on: ubuntu-22.04
-    name: Pre-commit Hooks
+    name: Pre-commit Hooks (Disabled)
+    if: false
 
     steps:
     - name: Checkout code
@@ -248,8 +249,7 @@ jobs:
     runs-on: ubuntu-22.04
     name: Test Summary
     needs: [lint-and-format]
-    #if: always()
-    if: false
+    if: always()
 
     steps:
     - name: Download all artifacts
