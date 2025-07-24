@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint-and-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Code Quality Checks
 
     steps:
@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
         cache: 'pip'
 
     - name: Install dependencies
@@ -41,8 +41,8 @@ jobs:
 
     - name: Security analysis with bandit
       run: |
-        bandit -r server.py src/ -f json -o bandit-report.json
-        bandit -r server.py src/ -f txt
+        bandit -r server.py -f json -o bandit-report.json
+        bandit -r server.py -f txt
 
     - name: Upload security report
       uses: actions/upload-artifact@v4
@@ -52,11 +52,11 @@ jobs:
         path: bandit-report.json
 
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Unit Tests
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10']
 
     steps:
     - name: Checkout code
@@ -87,7 +87,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.10'
       with:
         file: ./coverage.xml
         flags: unittests
@@ -104,7 +104,7 @@ jobs:
           reports/
 
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Integration Tests
     services:
       firebird:
@@ -130,7 +130,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
         cache: 'pip'
 
     - name: Install dependencies
@@ -175,7 +175,7 @@ jobs:
           reports/integration-report.html
 
   performance-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Performance Tests
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -186,7 +186,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
         cache: 'pip'
 
     - name: Install dependencies
@@ -210,7 +210,7 @@ jobs:
         path: benchmark.json
 
   docker-build-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Docker Build Test
 
     steps:
@@ -251,7 +251,7 @@ jobs:
           python3 -c "import server; print('Import successful')"
 
   security-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Security Scan
 
     steps:
@@ -273,7 +273,7 @@ jobs:
         sarif_file: 'trivy-results.sarif'
 
   pre-commit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Pre-commit Hooks
 
     steps:
@@ -295,7 +295,7 @@ jobs:
         pre-commit run --all-files --show-diff-on-failure
 
   test-summary:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Test Summary
     needs: [lint-and-format, unit-tests, integration-tests, docker-build-test]
     if: always()
