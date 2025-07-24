@@ -716,7 +716,7 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 ## 🏷️ Tags da Imagem
 
 - `latest` - Versão mais recente estável
-- `v1.0.0` - Versão específica
+- `1.0.0` - Versão específica
 - `main` - Versão de desenvolvimento
 
 ```bash
