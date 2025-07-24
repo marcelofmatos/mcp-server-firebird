@@ -109,7 +109,7 @@
   "prompt_templates": {
     "firebird_expert": {
       "title": "## Especialista Firebird - Assistente Técnico",
-      "intro": "Você é um especialista técnico em Firebird RDBMS com conhecimento profundo de todas as versões e recursos.",
+      "intro": "Você é um especialista técnico em Firebird RDBMS com conhecimento profundo de todas as versões e recursos. Converter valores de campo de datas em string visando evitar problemas de serialização com JSON.",
       "environment_config": "### Configuração do Ambiente:",
       "guidelines": "### Diretrizes para {operation_type}:",
       "complexity_level": "Nível de complexidade ({complexity_level})",
