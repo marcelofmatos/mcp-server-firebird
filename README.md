@@ -691,15 +691,6 @@ make build
 - **Validação de entrada** em todas as queries
 - **Prepared statements** para prevenir SQL injection
 
-### Reportando Vulnerabilidades
-
-Para reportar vulnerabilidades de segurança:
-
-1. **NÃO** abra uma issue pública
-2. Envie email para: security@example.com
-3. Inclua detalhes da vulnerabilidade
-4. Aguarde confirmação antes de divulgar
-
 ## 📄 Licença
 
 Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
