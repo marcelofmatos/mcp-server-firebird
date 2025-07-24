@@ -248,7 +248,8 @@ jobs:
     runs-on: ubuntu-22.04
     name: Test Summary
     needs: [lint-and-format]
-    if: always()
+    #if: always()
+    if: false
 
     steps:
     - name: Download all artifacts
