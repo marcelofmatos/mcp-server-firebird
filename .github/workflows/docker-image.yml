@@ -84,6 +84,11 @@ jobs:
               exit 0
               ;;
           esac
+
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "Webhook URL is not set for this branch."
+            exit 0
+          fi
           
           echo "Webhook URL: $WEBHOOK_URL"
           
