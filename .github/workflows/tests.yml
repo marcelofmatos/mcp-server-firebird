@@ -108,20 +108,25 @@ jobs:
     name: Integration Tests
     services:
       firebird:
-        image: jacobalberty/firebird:v4.0
+        image: jacobalberty/firebird:v3.0
         env:
-          FIREBIRD_DATABASE: test.fdb
+          FIREBIRD_DATABASE: test_db
           FIREBIRD_USER: SYSDBA
-          FIREBIRD_PASSWORD: test123
-          ISC_PASSWORD: test123
+          FIREBIRD_PASSWORD: masterkey
+          ISC_PASSWORD: masterkey
+          EnableLegacyClientAuth: true
+          FIREBIRD_CONF: |
+            ServerMode = SuperServer
+            DatabaseAccess = Full
+            UserManager = Srp
         ports:
           - 3050:3050
         options: >-
-          --health-cmd "/usr/local/firebird/bin/fbstat -h /firebird/data/test.fdb"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 5
-          --health-start-period 30s
+          --health-cmd "nc -z localhost 3050"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 60s
 
     steps:
     - name: Checkout code
@@ -140,12 +145,20 @@ jobs:
 
     - name: Wait for Firebird to be ready
       run: |
+        echo "Waiting for Firebird service to be healthy..."
         for i in {1..30}; do
           if nc -z localhost 3050; then
-            echo "Firebird is ready"
-            break
+            echo "Port 3050 is open, testing connection..."
+            # Try a simple query to verify Firebird is really ready
+            if timeout 10 python3 -c "import fdb; conn = fdb.connect(host='localhost', database='/firebird/data/test_db.fdb', user='SYSDBA', password='masterkey'); conn.close(); print('✅ Firebird connection successful')"; then
+              echo "Firebird is ready and accepting connections"
+              break
+            else
+              echo "Port open but Firebird not ready yet..."
+            fi
+          else
+            echo "Waiting for Firebird port 3050... ($i/30)"
           fi
-          echo "Waiting for Firebird... ($i/30)"
           sleep 10
         done
 
@@ -153,9 +166,9 @@ jobs:
       env:
         FIREBIRD_HOST: localhost
         FIREBIRD_PORT: 3050
-        FIREBIRD_DATABASE: /firebird/data/test.fdb
+        FIREBIRD_DATABASE: /firebird/data/test_db.fdb
         FIREBIRD_USER: SYSDBA
-        FIREBIRD_PASSWORD: test123
+        FIREBIRD_PASSWORD: masterkey
         FIREBIRD_CHARSET: UTF8
       run: |
         pytest tests/integration \
@@ -173,6 +186,16 @@ jobs:
         path: |
           integration-junit.xml
           reports/integration-report.html
+
+    - name: Debug Firebird container
+      if: failure()
+      run: |
+        echo "🔍 Debugging Firebird container..."
+        docker ps -a
+        echo "📋 Firebird container logs:"
+        docker logs $(docker ps -a --filter ancestor=jacobalberty/firebird:v3.0 --format "{{.ID}}" | head -1) || echo "No container found"
+        echo "🌐 Network connectivity:"
+        nc -zv localhost 3050 || echo "Port 3050 not accessible"
 
   security-scan:
     runs-on: ubuntu-22.04
