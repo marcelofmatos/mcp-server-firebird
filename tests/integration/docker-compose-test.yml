@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  firebird-test:
+    image: jacobalberty/firebird:v4.0
+    container_name: firebird-test-db
+    environment:
+      - FIREBIRD_DATABASE=test.fdb
+      - FIREBIRD_USER=SYSDBA
+      - FIREBIRD_PASSWORD=test123
+      - ISC_PASSWORD=test123
+    ports:
+      - "3050:3050"
+    volumes:
+      - firebird_test_data:/firebird/data
+      - firebird_test_logs:/firebird/log
+    healthcheck:
+      test: ["CMD", "/usr/local/firebird/bin/fbstat", "-h", "/firebird/data/test.fdb"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  mcp-server-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: mcp-server-test
+    depends_on:
+      firebird-test:
+        condition: service_healthy
+    environment:
+      - FIREBIRD_HOST=firebird-test
+      - FIREBIRD_PORT=3050
+      - FIREBIRD_DATABASE=/firebird/data/test.fdb
+      - FIREBIRD_USER=SYSDBA
+      - FIREBIRD_PASSWORD=test123
+      - FIREBIRD_CHARSET=UTF8
+      - FIREBIRD_LANGUAGE=en_US
+    volumes:
+      - ../../tests:/app/tests
+    command: ["python3", "-m", "pytest", "/app/tests/integration", "-v"]
+    profiles:
+      - integration-test
+
+volumes:
+  firebird_test_data:
+    driver: local
+  firebird_test_logs:
+    driver: local
+
+networks:
+  default:
+    name: mcp-test-network

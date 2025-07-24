@@ -11,6 +11,44 @@ Um servidor MCP (Model Context Protocol) completo para conectar a bancos de dado
 - ✅ **Conexões Externas** - Conecta a qualquer servidor Firebird remoto
 - ✅ **4 Ferramentas MCP** - test_connection, execute_query, list_tables, server_status
 - ✅ **Seguro** - Usuário não-root, health check integrado
+- ✅ **Internacionalização** - Suporte a múltiplos idiomas (pt_BR, en_US)
+- ✅ **Testes Abrangentes** - Cobertura de testes > 80% com testes unitários e de integração
+- ✅ **Qualidade de Código** - Linting, formatação automática e verificações de segurança
+- ✅ **CI/CD Automatizado** - Pipeline completo com GitHub Actions
+
+## 🌍 Internacionalização
+
+O servidor suporta múltiplos idiomas através de arquivos JSON centralizados:
+
+- **Idiomas disponíveis**: Português (pt_BR), Inglês (en_US)
+- **Configuração automática**: Via variáveis `FIREBIRD_LANGUAGE` ou `LANG`
+- **Fallback inteligente**: Usa inglês se idioma não encontrado
+- **Strings localizadas**: Mensagens de erro, logs, diagnósticos e prompts
+- **Fácil expansão**: Adicione novos idiomas criando arquivos JSON em `i18n/`
+
+### Configuração de Idioma
+
+```bash
+# Português
+docker run -e FIREBIRD_LANGUAGE=pt_BR ...
+
+# Inglês (padrão)
+docker run -e FIREBIRD_LANGUAGE=en_US ...
+
+# Automático via LANG
+export LANG=pt_BR.UTF-8
+```
+
+## 📦 Índice
+
+- [🌍 Internacionalização](#-internacionalização)
+- [🚀 Instalação Rápida](#-instalação-rápida)
+- [⚙️ Configuração](#️-configuração)
+- [🛠️ Ferramentas MCP](#️-ferramentas-mcp-disponíveis)
+- [🧪 Desenvolvimento e Testes](#-desenvolvimento-e-testes)
+- [🔍 Troubleshooting](#-troubleshooting)
+- [📊 Exemplos de Uso](#-exemplos-de-uso)
+- [🤝 Contribuição](#-contribuição)
 
 ## 🚀 Instalação Rápida
 
@@ -54,6 +92,9 @@ docker ps | grep mcp-firebird
 | `FIREBIRD_USER` | Usuário do banco | `SYSDBA` | ❌ |
 | `FIREBIRD_PASSWORD` | Senha do usuário | `masterkey` | ✅ |
 | `FIREBIRD_CHARSET` | Charset da conexão | `UTF8` | ❌ |
+| `FIREBIRD_LANGUAGE` | Idioma das mensagens | `en_US` | ❌ |
+| `MCP_SERVER_NAME` | Nome do servidor MCP | `firebird-expert-server` | ❌ |
+| `MCP_SERVER_VERSION` | Versão do servidor | `1.0.0` | ❌ |
 
 ### Exemplos de Configuração
 
@@ -64,6 +105,7 @@ docker run -d \
   -e FIREBIRD_HOST=localhost \
   -e FIREBIRD_DATABASE=/var/lib/firebird/employee.fdb \
   -e FIREBIRD_PASSWORD=sua_senha \
+  -e FIREBIRD_LANGUAGE=pt_BR \
   ghcr.io/marcelofmatos/mcp-server-firebird:latest
 ```
 
@@ -159,6 +201,139 @@ Mostra status completo do servidor MCP e bibliotecas.
 - Configuração atual
 - Teste de conexão
 - Recomendações
+
+## 🎯 Prompts Especialistas Disponíveis
+
+O servidor inclui prompts especialistas dinâmicos:
+
+### 1. firebird_expert
+Assistente especialista em Firebird com conhecimento profundo do SGBD.
+
+### 2. firebird_performance
+Especialista em otimização e performance para Firebird.
+
+### 3. firebird_architecture
+Especialista em arquitetura e administração Firebird.
+
+## 🧪 Desenvolvimento e Testes
+
+### Configuração do Ambiente de Desenvolvimento
+
+```bash
+# Clonar repositório
+git clone https://github.com/marcelofmatos/mcp-server-firebird
+cd mcp-server-firebird
+
+# Configurar ambiente completo
+make setup-dev
+
+# Ou manual:
+./scripts/setup-dev.sh
+```
+
+### Executando Testes
+
+O projeto possui uma suíte completa de testes:
+
+```bash
+# Todos os testes
+make test-all
+
+# Apenas testes unitários
+make test-unit
+
+# Testes de integração
+make test-integration
+
+# Testes de performance
+make test-performance
+
+# Execução rápida (sem testes lentos)
+make test-fast
+
+# Com relatório de cobertura HTML
+make test-coverage
+```
+
+### Qualidade de Código
+
+```bash
+# Verificações de qualidade
+make lint
+
+# Corrigir problemas automaticamente
+make lint-fix
+
+# Formatação de código
+make format
+
+# Verificação de tipos
+make type-check
+
+# Verificação de segurança
+make security-check
+
+# Pre-commit hooks
+make pre-commit
+```
+
+### Estrutura de Testes
+
+```
+tests/
+├── unit/                    # Testes unitários
+│   ├── test_firebird_server.py
+│   ├── test_mcp_server.py
+│   ├── test_i18n.py
+│   └── test_performance.py
+├── integration/             # Testes de integração
+│   ├── test_firebird_integration.py
+│   └── docker-compose-test.yml
+├── conftest.py             # Configurações compartilhadas
+└── __init__.py
+```
+
+### Cobertura de Testes
+
+O projeto mantém cobertura de testes superior a 80%:
+
+- **Testes unitários**: 150+ testes cobrindo todas as funções principais
+- **Testes de integração**: Validação com containers Firebird reais
+- **Testes de performance**: Benchmarks e testes de escalabilidade
+- **Testes de segurança**: Verificação de vulnerabilidades
+
+### Comandos de Desenvolvimento
+
+```bash
+# Ambiente de desenvolvimento completo
+make dev
+
+# Executar servidor local (sem Docker)
+make dev-server
+
+# Monitorar mudanças
+make watch
+
+# Relatório de cobertura
+make coverage-report
+
+# Benchmark de performance
+make benchmark
+
+# Limpeza completa
+make clean-all
+```
+
+### CI/CD Pipeline
+
+O projeto inclui pipeline completo no GitHub Actions:
+
+- **Verificações de código**: Ruff, Black, MyPy, Bandit
+- **Testes multi-versão**: Python 3.8-3.12
+- **Testes de integração**: Com Firebird real
+- **Build Docker**: Verificação de container
+- **Scan de segurança**: Trivy e CodeQL
+- **Relatórios**: Coverage, benchmarks, artefatos
 
 ## 🔍 Troubleshooting
 
@@ -321,6 +496,7 @@ services:
       - FIREBIRD_USER=APP_USER
       - FIREBIRD_PASSWORD=senha_segura
       - FIREBIRD_CHARSET=UTF8
+      - FIREBIRD_LANGUAGE=pt_BR
     healthcheck:
       test: ["CMD", "python3", "-c", "import fdb; print('OK')"]
       interval: 30s
@@ -332,15 +508,41 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # Firebird para testes (opcional)
+  firebird-test:
+    image: jacobalberty/firebird:v4.0
+    container_name: firebird-test-db
+    environment:
+      - FIREBIRD_DATABASE=test.fdb
+      - FIREBIRD_USER=SYSDBA
+      - FIREBIRD_PASSWORD=test123
+      - ISC_PASSWORD=test123
+    ports:
+      - "3050:3050"
+    volumes:
+      - firebird_data:/firebird/data
+    profiles:
+      - testing
+
+volumes:
+  firebird_data:
+    driver: local
 ```
 
 Executar:
 ```bash
+# Produção
 docker-compose up -d
+
+# Com Firebird de teste
+docker-compose --profile testing up -d
+
+# Logs
 docker-compose logs -f mcp-firebird
 ```
 
-## 🔧 Desenvolvimento
+## 🔧 Desenvolvimento Avançado
 
 ### Build Local
 ```bash
@@ -349,24 +551,74 @@ git clone https://github.com/marcelofmatos/mcp-server-firebird
 cd mcp-server-firebird
 
 # Build da imagem
-docker build -t mcp-firebird-local .
+make build
 
-# Testar
-docker run --rm \
-  -e FIREBIRD_HOST=localhost \
-  -e FIREBIRD_DATABASE=/test.fdb \
-  mcp-firebird-local
+# Testar localmente
+make dev
 ```
 
 ### Estrutura do Projeto
 ```
 mcp-server-firebird/
-├── Dockerfile          # Configuração do container
-├── server.py           # Servidor MCP
-├── README.md           # Esta documentação
-└── .github/
-    └── workflows/
-        └── docker.yml  # CI/CD GitHub Actions
+├── server.py               # Servidor MCP principal
+├── requirements.txt        # Dependências de produção
+├── requirements-dev.txt    # Dependências de desenvolvimento
+├── pyproject.toml         # Configuração do projeto
+├── Dockerfile             # Container de produção
+├── docker-compose.yml     # Orquestração
+├── Makefile              # Comandos de automação
+├── .pre-commit-config.yaml # Hooks de qualidade
+├── scripts/              # Scripts auxiliares
+│   ├── run-tests.sh      # Executor de testes
+│   └── setup-dev.sh      # Setup de desenvolvimento
+├── tests/                # Testes abrangentes
+│   ├── unit/            # Testes unitários
+│   ├── integration/     # Testes de integração
+│   └── conftest.py      # Configurações de teste
+├── i18n/                # Internacionalização
+│   ├── en_US.json       # Inglês (padrão)
+│   └── pt_BR.json       # Português brasileiro
+├── .github/             # CI/CD
+│   └── workflows/
+│       ├── tests.yml    # Pipeline de testes
+│       └── docker-image.yml # Build e deploy
+└── README.md           # Esta documentação
+```
+
+### Comandos Make Disponíveis
+
+```bash
+# Ambiente
+make setup-dev          # Configuração completa de desenvolvimento
+make install-deps       # Instalar dependências
+
+# Testes
+make test-all           # Todos os testes
+make test-unit          # Testes unitários
+make test-integration   # Testes de integração
+make test-performance   # Testes de performance
+make test-fast          # Execução rápida
+make test-coverage      # Com relatório HTML
+
+# Qualidade
+make lint               # Verificações de código
+make lint-fix           # Corrigir automaticamente
+make format            # Formatação
+make type-check        # Verificação de tipos
+make security-check    # Verificação de segurança
+make pre-commit        # Pre-commit hooks
+
+# Docker
+make build             # Build da imagem
+make run               # Executar container
+make dev               # Ambiente de desenvolvimento
+make logs              # Ver logs
+
+# Utilitários
+make clean-all         # Limpeza completa
+make coverage-report   # Relatório de cobertura
+make benchmark         # Benchmark de performance
+make health-check      # Verificar saúde do sistema
 ```
 
 ## 📚 Recursos Adicionais
@@ -374,15 +626,79 @@ mcp-server-firebird/
 - **Especificação MCP**: [Model Context Protocol](https://spec.modelcontextprotocol.io/)
 - **Documentação Firebird**: [Firebird Documentation](https://firebirdsql.org/en/documentation/)
 - **FDB Python Driver**: [python-fdb](https://github.com/FirebirdSQL/fdb)
+- **Pytest Documentation**: [Testing Framework](https://docs.pytest.org/)
+- **Docker Best Practices**: [Container Guidelines](https://docs.docker.com/develop/dev-best-practices/)
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Por favor:
+Contribuições são bem-vindas! Por favor, siga nosso guia de contribuição:
 
-1. Faça fork do repositório
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Abra um Pull Request
+### Fluxo de Desenvolvimento
+
+1. **Fork do repositório**
+2. **Configurar ambiente local**:
+   ```bash
+   git clone https://github.com/seu-usuario/mcp-server-firebird
+   cd mcp-server-firebird
+   make setup-dev
+   ```
+3. **Criar branch para feature**:
+   ```bash
+   git checkout -b feature/nova-funcionalidade
+   ```
+4. **Desenvolver com testes**:
+   ```bash
+   # Desenvolvimento iterativo
+   make test-fast      # Testes rápidos durante desenvolvimento
+   make lint-fix       # Correções automáticas
+   make test-all       # Teste completo antes de commit
+   ```
+5. **Commit das mudanças**:
+   ```bash
+   git add .
+   git commit -m "feat: adicionar nova funcionalidade"
+   ```
+6. **Push e Pull Request**
+
+### Padrões de Qualidade
+
+- **Cobertura de testes**: Mínimo 80%
+- **Linting**: Código deve passar em todas as verificações (ruff, black, mypy, bandit)
+- **Documentação**: Novas funcionalidades devem ser documentadas
+- **Testes**: Toda funcionalidade deve ter testes unitários
+- **Commits**: Usar [Conventional Commits](https://www.conventionalcommits.org/)
+
+### Executando Localmente
+
+```bash
+# Verificações antes do commit
+make pre-commit
+
+# Pipeline completo como no CI
+make test-all
+make lint
+make build
+```
+
+## 🔒 Segurança
+
+### Práticas de Segurança Implementadas
+
+- **Usuário não-root** no container
+- **Scanning de vulnerabilidades** com Trivy e Bandit
+- **Dependências auditadas** regularmente
+- **Secrets não expostos** em logs
+- **Validação de entrada** em todas as queries
+- **Prepared statements** para prevenir SQL injection
+
+### Reportando Vulnerabilidades
+
+Para reportar vulnerabilidades de segurança:
+
+1. **NÃO** abra uma issue pública
+2. Envie email para: security@example.com
+3. Inclua detalhes da vulnerabilidade
+4. Aguarde confirmação antes de divulgar
 
 ## 📄 Licença
 
@@ -392,6 +708,17 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 - **Issues**: [GitHub Issues](https://github.com/marcelofmatos/mcp-server-firebird/issues)
 - **Discussões**: [GitHub Discussions](https://github.com/marcelofmatos/mcp-server-firebird/discussions)
+- **Wiki**: [Project Wiki](https://github.com/marcelofmatos/mcp-server-firebird/wiki)
+
+### Status dos Badges
+
+![Tests](https://github.com/marcelofmatos/mcp-server-firebird/workflows/Tests%20and%20Quality%20Checks/badge.svg)
+![Docker](https://github.com/marcelofmatos/mcp-server-firebird/workflows/Docker%20image%20on%20GHCR/badge.svg)
+![Coverage](https://codecov.io/gh/marcelofmatos/mcp-server-firebird/branch/main/graph/badge.svg)
+![Security](https://img.shields.io/badge/security-bandit-green)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Firebird](https://img.shields.io/badge/firebird-3.0%2B-orange)
 
 ---
 
@@ -412,3 +739,5 @@ docker pull ghcr.io/marcelofmatos/mcp-server-firebird:dev
 ---
 
 **Feito com ❤️ para a comunidade Firebird e MCP**
+
+**[⬆ Voltar ao topo](#mcp-server-firebird)**

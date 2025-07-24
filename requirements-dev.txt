@@ -1,0 +1,41 @@
+# Dependências de desenvolvimento e teste
+# Dependências principais
+-r requirements.txt
+
+# Testes
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+pytest-xdist==3.5.0  # Execução paralela de testes
+pytest-html==4.1.1   # Relatórios HTML
+
+# Testes de integração
+testcontainers==4.7.2
+docker==7.0.0
+
+# Qualidade de código
+ruff==0.1.6           # Linter moderno (substitui flake8, isort, etc)
+black==23.11.0        # Formatador de código
+mypy==1.7.1           # Type checking
+bandit==1.7.5         # Security linting
+
+# Coverage e relatórios
+coverage[toml]==7.3.2
+
+# Ferramentas de desenvolvimento
+pre-commit==3.6.0     # Git hooks
+tox==4.11.4           # Testes em múltiplos ambientes
+
+# Utilitários para testes
+factory-boy==3.3.0    # Factories para dados de teste
+responses==0.24.1     # Mock de requests HTTP
+freezegun==1.2.2      # Mock de datetime
+
+# Debug e profiling
+pytest-profiling==1.7.0
+memory-profiler==0.61.0
+
+# Documentação
+sphinx==7.2.6
+sphinx-rtd-theme==1.3.0
