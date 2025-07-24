@@ -163,6 +163,8 @@ jobs:
           gh release create "$NEW_VERSION" \
             --title "$NEW_VERSION" \
             --notes "$RELEASE_NOTES" \
+            --draft=false \
+            --latest \
             $PRERELEASE_FLAG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
