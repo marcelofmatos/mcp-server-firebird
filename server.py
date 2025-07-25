@@ -74,9 +74,9 @@ def main():
         client_path=client_path
     )
     
-    # Initialize prompt system
+    # Initialize prompt system with i18n support
     prompt_manager = DefaultPromptManager()
-    prompt_generator = PromptGenerator(firebird_server)
+    prompt_generator = PromptGenerator(firebird_server, i18n)
     
     # Test connection if libraries are available
     if fdb_available and client_available:
