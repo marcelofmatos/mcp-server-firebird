@@ -75,7 +75,7 @@ def main():
     )
     
     # Initialize prompt system with i18n support
-    prompt_manager = DefaultPromptManager()
+    prompt_manager = DefaultPromptManager(i18n)
     prompt_generator = PromptGenerator(firebird_server, i18n)
     
     # Test connection if libraries are available

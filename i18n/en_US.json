@@ -82,30 +82,6 @@
     "unknown_tool": "Unknown tool",
     "error_executing": "Error executing"
   },
-  "prompts": {
-    "available": "Available expert prompts",
-    "firebird_expert": {
-      "name": "firebird_expert",
-      "description": "Firebird expert assistant with deep RDBMS knowledge",
-      "operation_type": "SQL operation type (select, insert, update, delete, ddl, admin)",
-      "table_context": "Table name or specific context",
-      "complexity_level": "Desired complexity level (basic, intermediate, advanced)"
-    },
-    "firebird_performance": {
-      "name": "firebird_performance",
-      "description": "Firebird performance optimization and tuning specialist",
-      "query_type": "Query type to optimize (simple, complex, reporting, oltp)",
-      "focus_area": "Focus area (indexes, joins, transactions, memory)"
-    },
-    "firebird_architecture": {
-      "name": "firebird_architecture",
-      "description": "Firebird architecture and administration specialist",
-      "topic": "Topic of interest (backup, security, monitoring, maintenance)",
-      "version_focus": "Specific Firebird version (2.5, 3.0, 4.0, 5.0)"
-    },
-    "unknown_prompt": "Unknown prompt",
-    "error_generating": "Error generating prompt"
-  },
   "prompt_templates": {
     "firebird_expert": {
       "title": "## Firebird Expert - Technical Assistant",
@@ -244,5 +220,70 @@
     "tables_failed": "Get tables failed", 
     "method_not_found": "Method not found",
     "notification_received": "Received initialized notification"
+  },
+  "prompts": {
+    "available": "Available expert prompts",
+    "firebird_expert": {
+      "name": "firebird_expert",
+      "description": "Firebird expert assistant with deep RDBMS knowledge",
+      "operation_type": "SQL operation type (select, insert, update, delete, ddl, admin)",
+      "table_context": "Table name or specific context",
+      "complexity_level": "Desired complexity level (basic, intermediate, advanced)"
+    },
+    "firebird_performance": {
+      "name": "firebird_performance",
+      "description": "Firebird performance optimization and tuning specialist",
+      "query_type": "Query type to optimize (simple, complex, reporting, oltp)",
+      "focus_area": "Focus area (indexes, joins, transactions, memory)"
+    },
+    "firebird_architecture": {
+      "name": "firebird_architecture",
+      "description": "Firebird architecture and administration specialist",
+      "topic": "Topic of interest (backup, security, monitoring, maintenance)",
+      "version_focus": "Specific Firebird version (2.5, 3.0, 4.0, 5.0)"
+    },
+    "unknown_prompt": "Unknown prompt",
+    "error_generating": "Error generating prompt",
+    "manager": {
+      "system_status": "Default prompt system",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "active_prompt": "Active default prompt",
+      "expert_mode_active": "FIREBIRD EXPERT MODE ACTIVE",
+      "environment": "Environment",
+      "expert_guidelines": "Expert Guidelines ({} level)",
+      "guideline_solutions": "Provide Firebird-specific solutions",
+      "guideline_performance": "Consider performance implications",
+      "guideline_compatibility": "Mention version compatibility",
+      "guideline_examples": "Include practical examples",
+      "guideline_pitfalls": "Highlight potential pitfalls",
+      "areas_expertise": "Areas of Expertise",
+      "expertise_areas": "SQL Syntax • Performance • Transactions • Stored Procedures • Administration • Architecture",
+      "advanced_features": "Advanced Features",
+      "advanced_list": "Window Functions • CTE • MERGE • GTT • Partial Indexes • Expression Indexes",
+      "auto_expert_mode": "Auto-Expert Mode: Automatically applies Firebird expert context for optimal guidance",
+      "error_generating": "Error generating default context",
+      "config_updated": "Configuration updated {}: {} → {}",
+      "unknown_config_key": "Unknown configuration key: {}"
+    }
+  },
+  "default_prompt": {
+    "system_enabled": "Default prompt system: enabled",
+    "system_disabled": "Default prompt system: disabled",
+    "default_prompt_active": "Default prompt: {}",
+    "error_generating_context": "Error generating default context: {}",
+    "updated_config": "Updated {}: {} → {}",
+    "unknown_config_key": "Unknown configuration key: {}",
+    "expert_mode_active": "🔥 **FIREBIRD EXPERT MODE ACTIVE**",
+    "environment_info": "**Environment:** {}:{} | DB: {} | User: {}",
+    "expert_guidelines": "**Expert Guidelines ({} level):**",
+    "provide_solutions": "✅ Provide Firebird-specific solutions",
+    "consider_performance": "✅ Consider performance implications",
+    "mention_compatibility": "✅ Mention version compatibility",
+    "include_examples": "✅ Include practical examples",
+    "highlight_pitfalls": "✅ Highlight potential pitfalls",
+    "areas_expertise": "**Areas of Expertise:** SQL Syntax • Performance • Transactions • Stored Procedures • Administration • Architecture",
+    "advanced_features": "**Advanced Features:** Window Functions • CTE • MERGE • GTT • Partial Indexes • Expression Indexes",
+    "separator": "---"
   }
 }
