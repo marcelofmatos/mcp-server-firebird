@@ -1,12 +1,16 @@
 
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo "Uso: $0 [version_type]"
-    echo "version_type: patch , minor, major"
-    exit 1
-fi
+case "$1" in
+    patch|minor|major)
+        version_type="$1"
+        ;;
+    *)
+        echo "Opção inválida: $1"
+        echo "As opções válidas são: patch, minor, major"
+        exit 1
+        ;;
+esac
 
-version_type="$1"
 gh workflow run "Create Release" -f version_type="$version_type"
 
