@@ -15,11 +15,11 @@ class DefaultPromptManager:
         self.config = DEFAULT_PROMPT_CONFIG
         self.i18n = i18n or I18n()
         
-        status = "habilitado" if self.config['enabled'] else "desabilitado"
-        log(f"🎯 Sistema de prompt padrão: {status}")
+        status = self.i18n.get('prompts.manager.enabled') if self.config['enabled'] else self.i18n.get('prompts.manager.disabled')
+        log(f"🎯 {self.i18n.get('prompts.manager.system_status')}: {status}")
         
         if self.config['enabled']:
-            log(f"📝 Prompt padrão: {self.config['prompt_name']}")
+            log(f"📝 {self.i18n.get('prompts.manager.active_prompt')}: {self.config['prompt_name']}")
     
     def get_default_context(self) -> str:
         """Generate default prompt context with current environment information."""
@@ -33,27 +33,27 @@ class DefaultPromptManager:
             # Get complexity level text
             complexity = self.i18n.get(f'complexity_levels.{self.config["complexity_level"]}', self.config['complexity_level'])
             
-            prompt_text = f"""🔥 **MODO ESPECIALISTA FIREBIRD ATIVO**
+            prompt_text = f"""🔥 **{self.i18n.get('prompts.manager.expert_mode_active')}**
 
-**Ambiente:** {env_info}
+**{self.i18n.get('prompts.manager.environment')}:** {env_info}
 
-**Diretrizes Especialistas (nível {complexity}):**
-✅ Fornecer soluções específicas do Firebird
-✅ Considerar implicações de performance  
-✅ Mencionar compatibilidade de versão
-✅ Incluir exemplos práticos
-✅ Destacar possíveis armadilhas
+**{self.i18n.get('prompts.manager.expert_guidelines', complexity)}:**
+✅ {self.i18n.get('prompts.manager.guideline_solutions')}
+✅ {self.i18n.get('prompts.manager.guideline_performance')}  
+✅ {self.i18n.get('prompts.manager.guideline_compatibility')}
+✅ {self.i18n.get('prompts.manager.guideline_examples')}
+✅ {self.i18n.get('prompts.manager.guideline_pitfalls')}
 
-**Áreas de Expertise:** Sintaxe SQL • Performance • Transações • Stored Procedures • Administração • Arquitetura
-**Recursos Avançados:** Window Functions • CTE • MERGE • GTT • Índices Parciais • Índices de Expressão
+**{self.i18n.get('prompts.manager.areas_expertise')}:** {self.i18n.get('prompts.manager.expertise_areas')}
+**{self.i18n.get('prompts.manager.advanced_features')}:** {self.i18n.get('prompts.manager.advanced_list')}
 
----
+{self.i18n.get('prompts.manager.separator')}
 
 """
             return prompt_text
             
         except Exception as e:
-            log(f"⚠️ Erro gerando contexto padrão: {e}")
+            log(f"⚠️ {self.i18n.get('prompts.manager.error_generating')}: {e}")
             return ""
     
     def apply_to_response(self, content: str, tool_name: str = None, disabled: bool = False) -> str:
@@ -94,7 +94,7 @@ class DefaultPromptManager:
         if not self.config['enabled']:
             return original_desc
         
-        enhanced = f"{original_desc}\n\n🎯 **Auto-Expert Mode**: Aplica automaticamente contexto especialista Firebird para orientação otimizada"
+        enhanced = f"{original_desc}\n\n🎯 **{self.i18n.get('prompts.manager.auto_expert_mode')}**"
         return enhanced
     
     def update_config(self, **kwargs):
@@ -108,9 +108,9 @@ class DefaultPromptManager:
             if key in self.config:
                 old_value = self.config[key]
                 self.config[key] = value
-                log(f"🔧 Configuração atualizada {key}: {old_value} → {value}")
+                log(f"🔧 {self.i18n.get('prompts.manager.config_updated', key, old_value, value)}")
             else:
-                log(f"⚠️ Chave de configuração desconhecida: {key}")
+                log(f"⚠️ {self.i18n.get('prompts.manager.unknown_config_key', key)}")
     
     def get_status(self) -> dict:
         """Get current prompt manager status and configuration."""

@@ -261,7 +261,8 @@
       "expertise_areas": "SQL Syntax • Performance • Transactions • Stored Procedures • Administration • Architecture",
       "advanced_features": "Advanced Features",
       "advanced_list": "Window Functions • CTE • MERGE • GTT • Partial Indexes • Expression Indexes",
-      "auto_expert_mode": "Auto-Expert Mode: Automatically applies Firebird expert context for optimal guidance",
+      "separator": "---",
+      "auto_expert_mode": "Automatically applies Firebird expert context for optimal guidance",
       "error_generating": "Error generating default context",
       "config_updated": "Configuration updated {}: {} → {}",
       "unknown_config_key": "Unknown configuration key: {}"
