@@ -3,11 +3,11 @@ name: Docker image on GHCR
 on:
   push:
     branches:
-      - 'main'
+      #- 'main'
       - 'homolog'
       - 'prod'
-    tags:
-      - '**'
+    #tags:
+    #  - '**'
   release:
     types: [released]
   workflow_dispatch:
