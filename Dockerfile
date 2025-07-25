@@ -129,7 +129,7 @@ RUN echo "🔥 === INSTALAÇÃO FIREBIRD OFICIAL ===" && \
 ENV FIREBIRD=/opt/firebird
 ENV FIREBIRD_HOME=/opt/firebird
 ENV PATH=$FIREBIRD/bin:$PATH
-ENV LD_LIBRARY_PATH=$FIREBIRD/lib:/opt/firebird/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu
+ENV LD_LIBRARY_PATH=$FIREBIRD/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu
 
 # Criar configuração adicional de bibliotecas
 RUN echo "🔧 Configurando ambiente Firebird..." && \
