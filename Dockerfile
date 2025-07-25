@@ -3,16 +3,9 @@
 FROM ubuntu:22.04
 
 # Definir variáveis de build
-ARG APP_VERSION
-ARG GIT_COMMIT
-ENV APP_VERSION=${APP_VERSION}
-ENV GIT_COMMIT=${GIT_COMMIT}
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Configuração básica
-ENV DEBIAN_FRONTEND=noninteractive
-LABEL maintainer="MCP Firebird Server"
-LABEL description="MCP Server para Firebird com bibliotecas cliente completas"
-LABEL version=${APP_VERSION}
 
 # ==========================================
 # FASE 1: INSTALAÇÃO DO SISTEMA BASE
@@ -190,6 +183,11 @@ RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /bin/bash mcp
 # Configurar diretório da aplicação
 WORKDIR /app
 
+ARG APP_VERSION
+ARG GIT_COMMIT
+ENV APP_VERSION=${APP_VERSION}
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 # Copiar código fonte completo
 COPY server.py .
 COPY src/ src/
@@ -231,3 +229,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 # Comando de execução
 CMD ["python3", "server.py"]
+
+LABEL maintainer="MCP Firebird Server"
+LABEL description="MCP Server para Firebird com bibliotecas cliente completas"
+LABEL version=${APP_VERSION}
