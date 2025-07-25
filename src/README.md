@@ -251,21 +251,6 @@ class ExtendedMCPServer(MCPServer):
 
 ---
 
-## 🚀 Comparação: Antes vs Depois
-
-| Aspecto | Antes (Monolítico) | Depois (Modular) |
-|---------|-------------------|------------------|
-| **Linhas por arquivo** | 1500+ | 150-300 |
-| **Responsabilidades** | Múltiplas misturadas | Uma por módulo |
-| **Testabilidade** | Apenas integração | Unit + Integration |
-| **Manutenibilidade** | Difícil | Fácil |
-| **Extensibilidade** | Limitada | Ilimitada |
-| **Debug** | Complexo | Simples |
-| **Onboarding** | Lento | Rápido |
-| **Reusabilidade** | Baixa | Alta |
-
----
-
 ## ⚡ Comandos Úteis
 
 ```bash

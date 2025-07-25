@@ -70,9 +70,6 @@ O MCP Firebird inclui um sistema inovador que **automaticamente aplica contexto 
 # Configuração Expert (padrão)
 source .env
 
-# Ou usar configurador
-./scripts/quick_config.sh
-
 # Configurações alternativas:
 export FIREBIRD_DEFAULT_PROMPT=firebird_performance  # Foco em performance
 export FIREBIRD_DEFAULT_PROMPT=firebird_architecture # Foco em administração
