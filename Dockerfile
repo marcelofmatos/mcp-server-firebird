@@ -12,7 +12,7 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 ENV DEBIAN_FRONTEND=noninteractive
 LABEL maintainer="MCP Firebird Server"
 LABEL description="MCP Server para Firebird com bibliotecas cliente completas"
-LABEL version="1.0.0"
+LABEL version=${APP_VERSION}
 
 # ==========================================
 # FASE 1: INSTALAÇÃO DO SISTEMA BASE
@@ -119,8 +119,7 @@ RUN echo "🔥 === INSTALAÇÃO FIREBIRD OFICIAL ===" && \
         find / -name "*fbclient*" -type f 2>/dev/null | head -5; \
     fi && \
     # Limpeza
-    cd / && rm -rf /tmp/Firebird-* && \
-    echo "🔥 === EXTRAÇÃO FIREBIRD CONCLUÍDA ==="
+    cd / && rm -rf /tmp/Firebird-*
 
 # ==========================================
 # FASE 4: CONFIGURAÇÃO DO AMBIENTE FIREBIRD
@@ -144,8 +143,7 @@ RUN echo "🔧 Configurando ambiente Firebird..." && \
     echo "📋 Verificando bibliotecas Firebird:" && \
     find /opt -name "*fbclient*" 2>/dev/null || echo "Nenhuma em /opt" && \
     find /usr/lib -name "*fbclient*" 2>/dev/null || echo "Nenhuma em /usr/lib" && \
-    ldconfig -p | grep fbclient || echo "fbclient não encontrado no cache" && \
-    echo "✅ Configuração do ambiente concluída"
+    ldconfig -p | grep fbclient || echo "fbclient não encontrado no cache"
 
 # Verificação pós-instalação e correção de dependências
 RUN echo "🔍 === VERIFICAÇÃO FINAL FIREBIRD ===" && \
@@ -170,28 +168,17 @@ RUN echo "🔍 === VERIFICAÇÃO FINAL FIREBIRD ===" && \
     # Atualizar ldconfig uma última vez
     ldconfig && \
     echo "📋 Status final das dependências:" && \
-    ldconfig -p | grep -E "(fbclient|tommath|tomcrypt)" && \
-    echo "🔍 === VERIFICAÇÃO CONCLUÍDA ==="
+    ldconfig -p | grep -E "(fbclient|tommath|tomcrypt)"
 
 # ==========================================
 # FASE 5: INSTALAÇÃO DO PYTHON FDB
 # ==========================================
 
 # Atualizar pip e instalar FDB
+COPY requirements.txt .
 RUN echo "🐍 === INSTALAÇÃO FDB PYTHON ===" && \
     pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir fdb==2.0.2 && \
-    echo "✅ FDB instalado com sucesso"
-
-# Teste completo do FDB com diagnósticos
-RUN echo "🧪 === TESTE FDB E DEPENDÊNCIAS ===" && \
-    echo "1. Testando importação do FDB..." && \
-    (python3 -c "import fdb; print('✅ FDB importado com sucesso')" || \
-     echo "❌ Falha na importação do FDB") && \
-    echo "2. Testando localização de biblioteca fbclient..." && \
-    (python3 -c "import ctypes.util; lib = ctypes.util.find_library('fbclient'); print(f'✅ fbclient encontrado: {lib}' if lib else '❌ fbclient não encontrado')" || \
-     echo "❌ Erro na verificação de biblioteca") && \
-    echo "🧪 === TESTE CONCLUÍDO ==="
+    pip3 install --no-cache-dir -r requirements.txt
 
 # ==========================================
 # FASE 6: CONFIGURAÇÃO DA APLICAÇÃO
@@ -202,8 +189,13 @@ RUN groupadd -r mcp && useradd -r -g mcp -d /app -s /bin/bash mcp
 
 # Configurar diretório da aplicação
 WORKDIR /app
+
+# Copiar código fonte completo
 COPY server.py .
+COPY src/ src/
 COPY i18n/ i18n/
+COPY pyproject.toml* .
+COPY README.md* .
 
 # Configurar permissões
 RUN chown -R mcp:mcp /app
@@ -223,8 +215,15 @@ ENV FIREBIRD_CHARSET=UTF8
 
 # Configurações do MCP Server
 ENV MCP_SERVER_NAME="firebird-mcp-server"
-ENV MCP_SERVER_VERSION="1.0.0"
+ENV MCP_SERVER_VERSION=${APP_VERSION}
 ENV LOG_LEVEL=INFO
+ENV MCP_SERVER_PORT=3000
+ENV MCP_LOG_LEVEL=info
+ENV MCP_DEFAULT_PROMPT_ENABLED=true
+ENV MCP_DEFAULT_PROMPT=firebird_expert
+ENV MCP_DEFAULT_OPERATION=query
+ENV MCP_DEFAULT_COMPLEXITY=intermediate
+ENV MCP_AUTO_APPLY_PROMPT=true
 
 # Health check para verificar se o servidor está funcionando
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

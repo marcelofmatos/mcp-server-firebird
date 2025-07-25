@@ -1,8 +1,8 @@
 # Makefile para Servidor MCP Firebird
-.PHONY: help build run stop logs test clean setup dev prod
+.PHONY: help build build-clean build-push build-verbose run stop logs test clean setup dev prod
 
 # Configurações
-DOCKER_IMAGE = mcp-firebird-server
+DOCKER_IMAGE = ghcr.io/marcelofmatos/mcp-server-firebird
 DOCKER_TAG = latest
 CONTAINER_NAME = mcp-firebird-server
 TEST_URL = http://localhost:3000
@@ -133,8 +133,9 @@ clean-code: ## Limpa e formata código
 # ==========================================
 
 build: ## Constrói a imagem Docker
-	@echo "$(BLUE)Construindo imagem Docker...$(NC)"
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+	@echo "$(BLUE)Construindo imagem Docker via build.sh...$(NC)"
+	@chmod +x build.sh
+	@./build.sh
 	@echo "$(GREEN)Imagem construída com sucesso!$(NC)"
 
 run: ## Inicia o servidor
@@ -163,10 +164,31 @@ status: ## Verifica status do servidor
 	@echo "$(BLUE)Health check:$(NC)"
 	@curl -s $(TEST_URL)/health | python3 -m json.tool || echo "$(RED)Servidor não está respondendo$(NC)"
 
-prod: ## Build para produção
+prod: ## Build para produção (sem cache)
 	@echo "$(BLUE)Construindo para produção...$(NC)"
-	docker build -t $(DOCKER_IMAGE):prod .
+	@chmod +x build.sh
+	@./build.sh --clean
 	@echo "$(GREEN)Build de produção concluído!$(NC)"
+
+build-clean: ## Build sem cache Docker
+	@echo "$(BLUE)Build limpo (sem cache)...$(NC)"
+	@chmod +x build.sh
+	@./build.sh --clean
+
+build-push: ## Build e push para registry
+	@echo "$(BLUE)Build e push para registry...$(NC)"
+	@chmod +x build.sh
+	@./build.sh --push
+
+build-verbose: ## Build com logs detalhados
+	@echo "$(BLUE)Build verboso...$(NC)"
+	@chmod +x build.sh
+	@./build.sh --verbose
+
+build-prod-push: ## Build produção e push
+	@echo "$(BLUE)Build de produção e push...$(NC)"
+	@chmod +x build.sh
+	@./build.sh --clean --push
 
 # ==========================================
 # DESENVOLVIMENTO
@@ -280,6 +302,7 @@ clean: ## Remove containers e imagens
 	@echo "$(BLUE)Limpando recursos Docker...$(NC)"
 	docker-compose down -v 2>/dev/null || true
 	docker rmi $(DOCKER_IMAGE):$(DOCKER_TAG) 2>/dev/null || true
+	docker rmi mcp-firebird-server:latest 2>/dev/null || true
 	docker system prune -f
 	@echo "$(GREEN)Limpeza Docker concluída!$(NC)"
 
@@ -329,6 +352,13 @@ docker-info: ## Mostra informações Docker úteis
 	@echo "Imagem: $(DOCKER_IMAGE):$(DOCKER_TAG)"
 	@echo "Container: $(CONTAINER_NAME)"
 	@echo "URL de teste: $(TEST_URL)"
+	@echo ""
+	@echo "$(BLUE)Comandos de build:$(NC)"
+	@echo "  make build         - Build padrão"
+	@echo "  make build-clean   - Build sem cache"
+	@echo "  make build-push    - Build e push"
+	@echo "  make build-verbose - Build detalhado"
+	@echo "  make prod          - Build produção"
 	@echo ""
 	@echo "$(BLUE)Comandos de desenvolvimento:$(NC)"
 	@echo "  make setup-dev   - Configuração completa de desenvolvimento"

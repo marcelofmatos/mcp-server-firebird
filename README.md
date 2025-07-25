@@ -2,6 +2,18 @@
 
 Um servidor MCP (Model Context Protocol) completo para conectar a bancos de dados Firebird externos. Este servidor permite que assistentes de IA executem queries SQL, listem tabelas e gerenciem conexões com bancos Firebird de forma segura e eficiente.
 
+## 📦 Índice
+
+- [🔥 Características](#-características)
+- [🌍 Internacionalização](#-internacionalização)
+- [🚀 Instalação Rápida](#-instalação-rápida)
+- [⚙️ Configuração](#️-configuração)
+- [🛠️ Ferramentas MCP](#️-ferramentas-mcp-disponíveis)
+- [🧪 Desenvolvimento e Testes](#-desenvolvimento-e-testes)
+- [🔍 Troubleshooting](#-troubleshooting)
+- [📊 Exemplos de Uso](#-exemplos-de-uso)
+- [🤝 Contribuição](#-contribuição)
+
 ## 🔥 Características
 
 - ✅ **Protocolo MCP Completo** - Implementa todas as especificações do MCP 2024-11-05
@@ -15,6 +27,8 @@ Um servidor MCP (Model Context Protocol) completo para conectar a bancos de dado
 - ✅ **Testes Abrangentes** - Cobertura de testes > 80% com testes unitários e de integração
 - ✅ **Qualidade de Código** - Linting, formatação automática e verificações de segurança
 - ✅ **CI/CD Automatizado** - Pipeline completo com GitHub Actions
+- 🎯 **Sistema de Prompt Padrão** - Aplica automaticamente contexto expert quando as respostas iniciarem o uso do servidor MCP
+- 🧠 **3 Prompts Especializados** - firebird_expert, firebird_performance, firebird_architecture
 
 ## 🌍 Internacionalização
 
@@ -39,16 +53,56 @@ docker run -e FIREBIRD_LANGUAGE=en_US ...
 export LANG=pt_BR.UTF-8
 ```
 
-## 📦 Índice
+## 🎯 Sistema de Prompt Padrão
 
-- [🌍 Internacionalização](#-internacionalização)
-- [🚀 Instalação Rápida](#-instalação-rápida)
-- [⚙️ Configuração](#️-configuração)
-- [🛠️ Ferramentas MCP](#️-ferramentas-mcp-disponíveis)
-- [🧪 Desenvolvimento e Testes](#-desenvolvimento-e-testes)
-- [🔍 Troubleshooting](#-troubleshooting)
-- [📊 Exemplos de Uso](#-exemplos-de-uso)
-- [🤝 Contribuição](#-contribuição)
+O MCP Firebird inclui um sistema inovador que **automaticamente aplica contexto expert** ao iniciar as respostas caso o servidor MCP seja requisitado, sem necessidade de configuração manual e aprimorando o uso da ferramenta.
+
+### 🚀 Funcionalidades
+
+- **🤖 Aplicação Automática**: Contexto firebird_expert por padrão no início da interação.
+- **🔧 Configuração Flexível**: Via environment variables ou tool parameters
+- **📊 Níveis de Complexidade**: basic, intermediate, advanced
+- **⏭️ Override Granular**: Desabilitar por tool call ou mudar operação
+
+### 📝 Configurações Rápidas
+
+```bash
+# Configuração Expert (padrão)
+source .env
+
+# Ou usar configurador
+./scripts/quick_config.sh
+
+# Configurações alternativas:
+export FIREBIRD_DEFAULT_PROMPT=firebird_performance  # Foco em performance
+export FIREBIRD_DEFAULT_PROMPT=firebird_architecture # Foco em administração
+export FIREBIRD_DEFAULT_PROMPT_ENABLED=false         # Desabilitar
+```
+
+### 🎯 Exemplo de primeira resposta
+
+**Com Expert Mode (padrão):**
+```
+🔥 **FIREBIRD EXPERT MODE ACTIVE**
+
+**Environment:** localhost:3050 | DB: database.fdb | User: SYSDBA
+**Expert Guidelines (intermediate level):**
+✅ Provide Firebird-specific solutions
+✅ Consider performance implications
+✅ Include practical examples
+✅ Answer language {lang}
+
+---
+
+📊 Query Results: {...}
+```
+
+**Desabilitar temporariamente:**
+```json
+{"tool": "execute_query", "arguments": {"sql": "SELECT...", "disable_expert_mode": true}}
+```
+
+
 
 ## 🚀 Instalação Rápida
 

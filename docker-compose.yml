@@ -3,7 +3,8 @@ version: '3.8'
 services:
   # Servidor MCP que conecta a banco externo
   mcp-server:
-    build: .
+    image: ghcr.io/marcelofmatos/mcp-server-firebird:latest
+    build: .  # Fallback para build local se imagem não existir
     container_name: mcp-firebird-server
     ports:
       - "3000:3000"  # Porta do servidor MCP
