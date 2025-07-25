@@ -1,5 +1,5 @@
 # Makefile para Servidor MCP Firebird
-.PHONY: help build build-clean build-push build-verbose run stop logs test clean setup dev prod
+.PHONY: help build build-clean build-push build-verbose run stop logs test clean setup dev prod release
 
 # Configurações
 DOCKER_IMAGE = ghcr.io/marcelofmatos/mcp-server-firebird
@@ -189,6 +189,20 @@ build-prod-push: ## Build produção e push
 	@echo "$(BLUE)Build de produção e push...$(NC)"
 	@chmod +x build.sh
 	@./build.sh --clean --push
+
+release: ## Cria release (uso: make release [patch|minor|major])
+	@echo "$(BLUE)Criando release...$(NC)"
+	@chmod +x create-release.sh
+	@if [ "$(filter-out release,$(MAKECMDGOALS))" = "" ]; then \
+		echo "$(RED)Erro: Especifique o tipo de versão!$(NC)"; \
+		echo "$(YELLOW)Uso: make release [patch|minor|major]$(NC)"; \
+		exit 1; \
+	fi
+	@./create-release.sh $(filter-out release,$(MAKECMDGOALS))
+	@echo "$(GREEN)Release criado com sucesso!$(NC)"
+
+%:
+	@:
 
 # ==========================================
 # DESENVOLVIMENTO
