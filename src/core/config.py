@@ -25,7 +25,8 @@ DEFAULT_PROMPT_CONFIG = {
     'prompt_name': os.getenv('FIREBIRD_DEFAULT_PROMPT', 'firebird_expert'),
     'operation_type': os.getenv('FIREBIRD_DEFAULT_OPERATION', 'query'),
     'complexity_level': os.getenv('FIREBIRD_DEFAULT_COMPLEXITY', 'intermediate'),
-    'auto_apply': os.getenv('FIREBIRD_AUTO_APPLY_PROMPT', 'true').lower() == 'true'
+    'auto_apply': os.getenv('FIREBIRD_AUTO_APPLY_PROMPT', 'false').lower() == 'true',  # Compact: conservative
+    'compact_mode': True  # Optimized token usage
 }
 
 def initialize_libraries() -> Tuple[bool, Optional[object], str, bool, Optional[str]]:
