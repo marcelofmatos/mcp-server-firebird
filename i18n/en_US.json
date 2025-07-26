@@ -82,30 +82,33 @@
     "unknown_tool": "Unknown tool",
     "error_executing": "Error executing"
   },
-  "prompt_templates": {
-    "firebird_expert": {
-      "expert_title": "## You are a Firebird {version} expert",
-      "intro": "Firebird technical expert. Convert dates to string (JSON).",
-      "environment_config": "**Env**: {host}:{port} | DB: {database} | User: {user}",
-      "firebird_expertise": "**Expertise**: SQL, Performance, Transactions, PSQL, Admin, Architecture",
-      "advanced_features": "**Features**: Window Functions, CTE, MERGE, GTT, Special Indexes",
-      "response_approach": "Provide specific solutions, consider performance and compatibility",
-      "available_tables": "Tables: {tables}"
-    },
-    "firebird_performance": {
-      "title": "## Firebird Performance",
-      "intro": "Firebird optimization specialist.",
-      "focus_queries": "Focus: {query_type}",
-      "methodology": "Analysis → Indexes → Optimization → Test → Monitor",
-      "key_metrics": "Selectivity, Page Reads, Memory, Locks, Garbage Collection"
-    },
-    "firebird_architecture": {
-      "title": "## Firebird Architecture",
-      "intro": "Firebird administration specialist.",
-      "focus_topic": "Focus: {topic}",
-      "architectures": "Classic, SuperServer, SuperClassic, Embedded",
-      "practices": "Backup, Monitor, Maintenance, Security, Documentation"
-    }
+  "table_schema": {
+    "description": "Schema information for table {table_name}",
+    "header": "# Table Schema: {table_name}",
+    "table_info": "## Table Information",
+    "table_name": "Table name",
+    "database": "Database",
+    "columns_header": "## Columns",
+    "nullable": "Nullable",
+    "nullable_yes": "Yes",
+    "nullable_no": "No",
+    "default": "Default",
+    "no_default": "No default",
+    "primary_keys_header": "## Primary Keys",
+    "foreign_keys_header": "## Foreign Keys",
+    "references": "References",
+    "indexes_header": "## Indexes",
+    "unique": "unique",
+    "non_unique": "non-unique",
+    "usage_guidance": "## Usage Guidance",
+    "select_guidance": "For SELECT queries, use appropriate indexes for better performance",
+    "join_guidance": "For JOINs, utilize the defined foreign keys",
+    "insert_guidance": "For INSERTs, respect primary and foreign key constraints",
+    "update_guidance": "For UPDATEs, always use WHERE with indexed fields",
+    "no_server_error": "Error: Firebird server not available",
+    "schema_error": "Error getting schema for table {table_name}: {error}",
+    "generation_error": "Error generating prompt for table {table_name}: {error}",
+    "error_generating": "Error generating schema"
   },
   "complexity_levels": {
     "basic": "Simplicity, basic features",
@@ -154,28 +157,8 @@
     "notification_received": "Received initialized notification"
   },
   "prompts": {
-    "available": "Available expert prompts",
-    "firebird_expert": {
-      "name": "firebird_expert",
-      "description": "Firebird expert assistant with deep RDBMS knowledge",
-      "operation_type": "SQL operation type (select, insert, update, delete, ddl, admin)",
-      "table_context": "Table name or specific context",
-      "complexity_level": "Desired complexity level (basic, intermediate, advanced)"
-    },
-    "firebird_performance": {
-      "name": "firebird_performance",
-      "description": "Firebird performance optimization and tuning specialist",
-      "query_type": "Query type to optimize (simple, complex, reporting, oltp)",
-      "focus_area": "Focus area (indexes, joins, transactions, memory)"
-    },
-    "firebird_architecture": {
-      "name": "firebird_architecture",
-      "description": "Firebird architecture and administration specialist",
-      "topic": "Topic of interest (backup, security, monitoring, maintenance)",
-      "version_focus": "Specific Firebird version (2.5, 3.0, 4.0, 5.0)"
-    },
+    "available": "Available table schema prompts",
     "unknown_prompt": "Unknown prompt",
-    "error_generating": "Error generating prompt",
     "manager": {
       "system_status": "Default prompt system",
       "enabled": "enabled",

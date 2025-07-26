@@ -143,62 +143,17 @@ class MCPServer:
         self.send_response(request_id, {"resources": resources})
     
     def handle_prompts_list(self, request_id: Any, params: Dict):
-        """List available prompts."""
-        prompts = [
-            {
-                "name": self.i18n.get('prompts.firebird_expert.name'),
-                "description": self.i18n.get('prompts.firebird_expert.description'),
-                "arguments": [
-                    {
-                        "name": "operation_type",
-                        "description": self.i18n.get('prompts.firebird_expert.operation_type'),
-                        "required": False
-                    },
-                    {
-                        "name": "table_context",
-                        "description": self.i18n.get('prompts.firebird_expert.table_context'),
-                        "required": False
-                    },
-                    {
-                        "name": "complexity_level",
-                        "description": self.i18n.get('prompts.firebird_expert.complexity_level'),
-                        "required": False
-                    }
-                ]
-            },
-            {
-                "name": self.i18n.get('prompts.firebird_performance.name'),
-                "description": self.i18n.get('prompts.firebird_performance.description'),
-                "arguments": [
-                    {
-                        "name": "query_type",
-                        "description": self.i18n.get('prompts.firebird_performance.query_type'),
-                        "required": False
-                    },
-                    {
-                        "name": "focus_area",
-                        "description": self.i18n.get('prompts.firebird_performance.focus_area'),
-                        "required": False
-                    }
-                ]
-            },
-            {
-                "name": self.i18n.get('prompts.firebird_architecture.name'),
-                "description": self.i18n.get('prompts.firebird_architecture.description'),
-                "arguments": [
-                    {
-                        "name": "topic",
-                        "description": self.i18n.get('prompts.firebird_architecture.topic'),
-                        "required": False
-                    },
-                    {
-                        "name": "version_focus",
-                        "description": self.i18n.get('prompts.firebird_architecture.version_focus'),
-                        "required": False
-                    }
-                ]
-            }
-        ]
+        """List available prompts dynamically based on database tables."""
+        table_prompts = self.prompt_generator.get_available_table_prompts()
+        
+        prompts = []
+        for table_prompt in table_prompts:
+            prompts.append({
+                "name": table_prompt["name"],
+                "description": table_prompt["description"],
+                "arguments": []
+            })
+        
         self.send_response(request_id, {"prompts": prompts})
     
     def handle_prompts_get(self, request_id: Any, params: Dict):
@@ -210,7 +165,7 @@ class MCPServer:
             prompt_text = self.prompt_generator.generate(prompt_name, arguments)
             
             result = {
-                "description": f"Dynamic {prompt_name} prompt with current context",
+                "description": f"Schema information for table: {prompt_name.replace('_schema', '')}",
                 "messages": [{
                     "role": "user",
                     "content": {
@@ -223,7 +178,7 @@ class MCPServer:
             self.send_response(request_id, result)
             
         except Exception as e:
-            self.send_error(request_id, -32603, f"{self.i18n.get('prompts.error_generating')}: {str(e)}")
+            self.send_error(request_id, -32603, f"{self.i18n.get('table_schema.error_generating')}: {str(e)}")
     
     def handle_tools_call(self, request_id: Any, params: Dict):
         """Execute tool with automatic expert context."""
@@ -386,6 +341,13 @@ class MCPServer:
                 "Verify LD_LIBRARY_PATH includes Firebird library directory",
                 "Rebuild container if libraries are missing"
             ])
+        
+        # Add dynamic prompts information
+        table_prompts = self.prompt_generator.get_available_table_prompts()
+        status["dynamic_prompts"] = {
+            "available_table_schemas": len(table_prompts),
+            "tables": [prompt["title"] for prompt in table_prompts[:10]]  # Show first 10
+        }
         
         return status
     

@@ -306,3 +306,178 @@ class FirebirdMCPServer:
                 "error": str(e),
                 "table_name": table_name
             }
+    
+    def get_table_schema(self, table_name: str) -> Dict[str, Any]:
+        """Get complete schema information for a table including relationships and keys."""
+        if not self.fdb_available or not self.client_available:
+            return {"success": False, "error": "Required libraries not available"}
+        
+        try:
+            conn = self.fdb.connect(
+                dsn=self.dsn,
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                charset=DB_CONFIG['charset']
+            )
+            cursor = conn.cursor()
+            
+            # Get columns with data types
+            cursor.execute("""
+                SELECT 
+                    TRIM(rf.RDB$FIELD_NAME) as column_name,
+                    CASE f.RDB$FIELD_TYPE
+                        WHEN 7 THEN 'smallint'
+                        WHEN 8 THEN 'integer'
+                        WHEN 10 THEN 'float'
+                        WHEN 12 THEN 'date'
+                        WHEN 13 THEN 'time'
+                        WHEN 14 THEN 'char('
+                        WHEN 16 THEN 'bigint'
+                        WHEN 27 THEN 'double precision'
+                        WHEN 35 THEN 'timestamp'
+                        WHEN 37 THEN 'varchar('
+                        WHEN 261 THEN 'blob'
+                        ELSE 'unknown'
+                    END ||
+                    CASE 
+                        WHEN f.RDB$FIELD_TYPE IN (14, 37) THEN f.RDB$FIELD_LENGTH || ')'
+                        WHEN f.RDB$FIELD_TYPE = 16 AND f.RDB$FIELD_SUB_TYPE = 1 THEN 'numeric(' || f.RDB$FIELD_PRECISION || ',' || (-f.RDB$FIELD_SCALE) || ')'
+                        WHEN f.RDB$FIELD_TYPE = 16 AND f.RDB$FIELD_SUB_TYPE = 2 THEN 'decimal(' || f.RDB$FIELD_PRECISION || ',' || (-f.RDB$FIELD_SCALE) || ')'
+                        ELSE ''
+                    END as data_type,
+                    CASE WHEN rf.RDB$NULL_FLAG IS NULL THEN 'YES' ELSE 'NO' END as nullable,
+                    TRIM(rf.RDB$DEFAULT_SOURCE) as default_value,
+                    rf.RDB$FIELD_POSITION as position
+                FROM RDB$RELATION_FIELDS rf
+                JOIN RDB$FIELDS f ON rf.RDB$FIELD_SOURCE = f.RDB$FIELD_NAME
+                WHERE rf.RDB$RELATION_NAME = ?
+                ORDER BY rf.RDB$FIELD_POSITION
+            """, [table_name.upper()])
+            
+            columns = cursor.fetchall()
+            
+            # Get primary key
+            cursor.execute("""
+                SELECT TRIM(s.RDB$FIELD_NAME) as column_name
+                FROM RDB$INDEX_SEGMENTS s
+                JOIN RDB$INDICES i ON s.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+                JOIN RDB$RELATION_CONSTRAINTS rc ON i.RDB$INDEX_NAME = rc.RDB$INDEX_NAME
+                WHERE rc.RDB$RELATION_NAME = ?
+                AND rc.RDB$CONSTRAINT_TYPE = 'PRIMARY KEY'
+                ORDER BY s.RDB$FIELD_POSITION
+            """, [table_name.upper()])
+            
+            primary_keys = [row[0] for row in cursor.fetchall()]
+            
+            # Get foreign keys
+            cursor.execute("""
+                SELECT 
+                    TRIM(rc.RDB$CONSTRAINT_NAME) as constraint_name,
+                    TRIM(s.RDB$FIELD_NAME) as column_name,
+                    TRIM(rc2.RDB$RELATION_NAME) as referenced_table,
+                    TRIM(s2.RDB$FIELD_NAME) as referenced_column
+                FROM RDB$RELATION_CONSTRAINTS rc
+                JOIN RDB$INDICES i ON rc.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+                JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
+                JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME
+                JOIN RDB$RELATION_CONSTRAINTS rc2 ON refc.RDB$CONST_NAME_UQ = rc2.RDB$CONSTRAINT_NAME
+                JOIN RDB$INDICES i2 ON rc2.RDB$INDEX_NAME = i2.RDB$INDEX_NAME
+                JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME
+                WHERE rc.RDB$RELATION_NAME = ?
+                AND rc.RDB$CONSTRAINT_TYPE = 'FOREIGN KEY'
+                AND s.RDB$FIELD_POSITION = s2.RDB$FIELD_POSITION
+                ORDER BY rc.RDB$CONSTRAINT_NAME, s.RDB$FIELD_POSITION
+            """, [table_name.upper()])
+            
+            foreign_keys = cursor.fetchall()
+            
+            # Get indexes
+            cursor.execute("""
+                SELECT 
+                    TRIM(i.RDB$INDEX_NAME) as index_name,
+                    TRIM(s.RDB$FIELD_NAME) as column_name,
+                    i.RDB$UNIQUE_FLAG as is_unique
+                FROM RDB$INDICES i
+                JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
+                WHERE i.RDB$RELATION_NAME = ?
+                AND i.RDB$SYSTEM_FLAG = 0
+                ORDER BY i.RDB$INDEX_NAME, s.RDB$FIELD_POSITION
+            """, [table_name.upper()])
+            
+            indexes = cursor.fetchall()
+            
+            conn.close()
+            
+            # Format columns
+            formatted_columns = []
+            for col in columns:
+                formatted_columns.append({
+                    "column_name": col[0],
+                    "data_type": col[1],
+                    "nullable": col[2],
+                    "default_value": col[3],
+                    "position": col[4]
+                })
+            
+            # Format foreign keys
+            formatted_fks = []
+            for fk in foreign_keys:
+                formatted_fks.append({
+                    "constraint_name": fk[0],
+                    "column_name": fk[1],
+                    "referenced_table": fk[2],
+                    "referenced_column": fk[3]
+                })
+            
+            # Format indexes
+            formatted_indexes = []
+            for idx in indexes:
+                formatted_indexes.append({
+                    "index_name": idx[0],
+                    "column_name": idx[1],
+                    "is_unique": idx[2] == 1
+                })
+            
+            return {
+                "success": True,
+                "table_name": table_name,
+                "columns": formatted_columns,
+                "primary_keys": primary_keys,
+                "foreign_keys": formatted_fks,
+                "indexes": formatted_indexes
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "table_name": table_name
+            }
+    
+    def get_all_tables_schema(self) -> Dict[str, Any]:
+        """Get schema information for all tables in the database."""
+        if not self.fdb_available or not self.client_available:
+            return {"success": False, "error": "Required libraries not available"}
+        
+        try:
+            tables_result = self.get_tables()
+            if not tables_result.get("success"):
+                return tables_result
+            
+            tables_schema = {}
+            for table_name in tables_result["tables"]:
+                schema = self.get_table_schema(table_name)
+                if schema.get("success"):
+                    tables_schema[table_name] = schema
+            
+            return {
+                "success": True,
+                "tables_schema": tables_schema,
+                "count": len(tables_schema)
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }

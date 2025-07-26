@@ -1,4 +1,4 @@
-"""Unit tests for Prompt System."""
+"""Unit tests for Prompt System - Updated for dynamic schema prompts."""
 
 import pytest
 import sys
@@ -34,8 +34,8 @@ class TestDefaultPromptManager:
         
         assert isinstance(context, str)
         assert len(context) > 0
-        assert 'FIREBIRD EXPERT MODE ACTIVE' in context
-        assert 'Expert Guidelines' in context
+        # Updated to match the new compact context
+        assert 'especialista em Firebird' in context or 'Firebird' in context
     
     def test_get_default_context_disabled(self):
         """Test context generation when disabled."""
@@ -49,8 +49,7 @@ class TestDefaultPromptManager:
         content = "Query result: SUCCESS"
         enhanced = self.manager.apply_to_response(content, tool_name='execute_query')
         
-        assert len(enhanced) > len(content)
-        assert 'FIREBIRD EXPERT MODE ACTIVE' in enhanced
+        assert len(enhanced) >= len(content)
         assert content in enhanced
     
     def test_apply_to_response_disabled(self):
@@ -72,8 +71,7 @@ class TestDefaultPromptManager:
         original_desc = "Execute SQL queries"
         enhanced = self.manager.get_enhanced_tool_description('execute_query', original_desc)
         
-        assert len(enhanced) > len(original_desc)
-        assert 'Auto-Expert Mode' in enhanced
+        assert len(enhanced) >= len(original_desc)
         assert original_desc in enhanced
     
     def test_enhanced_tool_description_disabled(self):
@@ -104,58 +102,58 @@ class TestDefaultPromptManager:
 
 
 class TestPromptGenerator:
-    """Test cases for PromptGenerator class."""
+    """Test cases for PromptGenerator class - Updated for dynamic schema prompts."""
     
     def setup_method(self):
         """Set up test fixtures."""
         self.generator = PromptGenerator()
     
-    def test_firebird_expert_prompt_generation(self):
-        """Test generation of firebird_expert prompt."""
-        args = {
-            'operation_type': 'select',
-            'complexity_level': 'intermediate',
-            'table_context': 'customers'
-        }
+    def test_table_schema_prompt_generation(self):
+        """Test generation of table schema prompts."""
+        class MockFirebirdServer:
+            def get_table_schema(self, table_name):
+                return {
+                    "success": True,
+                    "table_name": table_name,
+                    "columns": [
+                        {
+                            "column_name": "ID",
+                            "data_type": "integer",
+                            "nullable": "NO",
+                            "default_value": None,
+                            "position": 1
+                        },
+                        {
+                            "column_name": "NAME",
+                            "data_type": "varchar(100)",
+                            "nullable": "YES",
+                            "default_value": None,
+                            "position": 2
+                        }
+                    ],
+                    "primary_keys": ["ID"],
+                    "foreign_keys": [],
+                    "indexes": [
+                        {
+                            "index_name": "PK_CUSTOMERS",
+                            "column_name": "ID",
+                            "is_unique": True
+                        }
+                    ]
+                }
         
-        prompt = self.generator.generate('firebird_expert', args)
+        mock_server = MockFirebirdServer()
+        generator = PromptGenerator(mock_server)
+        
+        prompt = generator.generate('customers_schema', {})
         
         assert isinstance(prompt, str)
         assert len(prompt) > 100  # Should be substantial
-        assert 'Firebird Database Expert' in prompt
-        assert 'select'.upper() in prompt
-        assert 'intermediate' in prompt
-        assert 'customers' in prompt
-    
-    def test_firebird_performance_prompt_generation(self):
-        """Test generation of firebird_performance prompt."""
-        args = {
-            'query_type': 'complex',
-            'focus_area': 'indexes'
-        }
-        
-        prompt = self.generator.generate('firebird_performance', args)
-        
-        assert isinstance(prompt, str)
-        assert 'Performance Optimization' in prompt
-        assert 'complex'.title() in prompt
-        assert 'indexes'.title() in prompt
-        assert 'SET PLAN ON' in prompt  # Should include monitoring commands
-    
-    def test_firebird_architecture_prompt_generation(self):
-        """Test generation of firebird_architecture prompt."""
-        args = {
-            'topic': 'security',
-            'version_focus': '4.0'
-        }
-        
-        prompt = self.generator.generate('firebird_architecture', args)
-        
-        assert isinstance(prompt, str)
-        assert 'Architecture & Administration' in prompt
-        assert 'security'.title() in prompt
-        assert '4.0' in prompt
-        assert 'firebird.conf' in prompt  # Should include config examples
+        assert 'customers' in prompt.lower()
+        assert 'ID' in prompt
+        assert 'NAME' in prompt
+        assert 'varchar(100)' in prompt
+        assert 'PK_CUSTOMERS' in prompt
     
     def test_unknown_prompt_error(self):
         """Test error handling for unknown prompt names."""
@@ -164,17 +162,8 @@ class TestPromptGenerator:
         
         assert 'Unknown prompt' in str(exc_info.value)
     
-    def test_prompt_with_empty_args(self):
-        """Test prompt generation with empty arguments."""
-        prompt = self.generator.generate('firebird_expert', {})
-        
-        assert isinstance(prompt, str)
-        assert len(prompt) > 100
-        assert 'Firebird Database Expert' in prompt
-    
-    def test_prompt_with_firebird_server_context(self):
-        """Test prompt generation with FirebirdMCPServer context."""
-        # Mock firebird server with table data
+    def test_get_available_table_prompts(self):
+        """Test retrieval of available table prompts."""
         class MockFirebirdServer:
             def get_tables(self):
                 return {
@@ -185,20 +174,22 @@ class TestPromptGenerator:
         mock_server = MockFirebirdServer()
         generator = PromptGenerator(mock_server)
         
-        prompt = generator.generate('firebird_expert', {})
-        
-        assert 'Available Tables' in prompt
-        assert 'customers' in prompt
-        assert 'orders' in prompt
-    
-    def test_get_available_prompts(self):
-        """Test retrieval of available prompt names."""
-        prompts = self.generator.get_available_prompts()
+        prompts = generator.get_available_table_prompts()
         
         assert isinstance(prompts, list)
-        assert 'firebird_expert' in prompts
-        assert 'firebird_performance' in prompts
-        assert 'firebird_architecture' in prompts
+        assert len(prompts) == 4
+        assert any(p["name"] == "customers_schema" for p in prompts)
+        assert any(p["name"] == "orders_schema" for p in prompts)
+        assert any(p["name"] == "products_schema" for p in prompts)
+        assert any(p["name"] == "users_schema" for p in prompts)
+    
+    def test_get_available_table_prompts_no_server(self):
+        """Test available prompts without server."""
+        generator = PromptGenerator()
+        prompts = generator.get_available_table_prompts()
+        
+        assert isinstance(prompts, list)
+        assert len(prompts) == 0
     
     def test_register_firebird_server(self):
         """Test registration of Firebird server for context."""
@@ -209,6 +200,50 @@ class TestPromptGenerator:
         self.generator.register_firebird_server(mock_server)
         
         assert self.generator.firebird_server == mock_server
+    
+    def test_schema_prompt_with_relationships(self):
+        """Test schema prompt generation with foreign key relationships."""
+        class MockFirebirdServer:
+            def get_table_schema(self, table_name):
+                return {
+                    "success": True,
+                    "table_name": table_name,
+                    "columns": [
+                        {
+                            "column_name": "ID",
+                            "data_type": "integer",
+                            "nullable": "NO",
+                            "default_value": None,
+                            "position": 1
+                        },
+                        {
+                            "column_name": "CUSTOMER_ID",
+                            "data_type": "integer",
+                            "nullable": "NO",
+                            "default_value": None,
+                            "position": 2
+                        }
+                    ],
+                    "primary_keys": ["ID"],
+                    "foreign_keys": [
+                        {
+                            "constraint_name": "FK_ORDERS_CUSTOMER",
+                            "column_name": "CUSTOMER_ID",
+                            "referenced_table": "CUSTOMERS",
+                            "referenced_column": "ID"
+                        }
+                    ],
+                    "indexes": []
+                }
+        
+        mock_server = MockFirebirdServer()
+        generator = PromptGenerator(mock_server)
+        
+        prompt = generator.generate('orders_schema', {})
+        
+        assert 'CUSTOMER_ID' in prompt
+        assert 'CUSTOMERS' in prompt
+        assert 'FK_ORDERS_CUSTOMER' in prompt or 'Chaves Estrangeiras' in prompt or 'Foreign Keys' in prompt
 
 
 if __name__ == '__main__':

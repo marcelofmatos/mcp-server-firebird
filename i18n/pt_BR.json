@@ -82,30 +82,33 @@
     "unknown_tool": "Ferramenta desconhecida",
     "error_executing": "Erro executando"
   },
-  "prompt_templates": {
-    "firebird_expert": {
-      "expert_title": "## Você é um especialista em Firebird {version}",
-      "intro": "Especialista técnico Firebird. Convert datas para string (JSON).",
-      "environment_config": "**Env**: {host}:{port} | BD: {database} | User: {user}",
-      "firebird_expertise": "**Expertise**: SQL, Performance, Transações, PSQL, Admin, Arquitetura",
-      "advanced_features": "**Recursos**: Window Functions, CTE, MERGE, GTT, Índices Especiais",
-      "response_approach": "Forneça soluções específicas, considere performance e compatibilidade",
-      "available_tables": "Tabelas: {tables}"
-    },
-    "firebird_performance": {
-      "title": "## Performance Firebird",
-      "intro": "Especialista otimização Firebird.",
-      "focus_queries": "Foco: {query_type}",
-      "methodology": "Análise → Índices → Otimização → Teste → Monitor",
-      "key_metrics": "Seletividade, Page Reads, Memória, Locks, Garbage Collection"
-    },
-    "firebird_architecture": {
-      "title": "## Arquitetura Firebird",
-      "intro": "Especialista administração Firebird.",
-      "focus_topic": "Foco: {topic}",
-      "architectures": "Classic, SuperServer, SuperClassic, Embedded",
-      "practices": "Backup, Monitor, Manutenção, Segurança, Documentação"
-    }
+  "table_schema": {
+    "description": "Informações de schema da tabela {table_name}",
+    "header": "# Schema da Tabela: {table_name}",
+    "table_info": "## Informações da Tabela",
+    "table_name": "Nome da tabela",
+    "database": "Banco de dados",
+    "columns_header": "## Colunas",
+    "nullable": "Nulo",
+    "nullable_yes": "Sim",
+    "nullable_no": "Não",
+    "default": "Padrão",
+    "no_default": "Sem padrão",
+    "primary_keys_header": "## Chaves Primárias",
+    "foreign_keys_header": "## Chaves Estrangeiras",
+    "references": "Referencia",
+    "indexes_header": "## Índices",
+    "unique": "único",
+    "non_unique": "não único",
+    "usage_guidance": "## Orientações de Uso",
+    "select_guidance": "Para consultas SELECT, use os índices apropriados para melhor performance",
+    "join_guidance": "Para JOINs, utilize as chaves estrangeiras definidas",
+    "insert_guidance": "Para INSERTs, respeite as constraints de chave primária e estrangeira",
+    "update_guidance": "Para UPDATEs, sempre use WHERE com campos indexados",
+    "no_server_error": "Erro: Servidor Firebird não disponível",
+    "schema_error": "Erro ao obter schema da tabela {table_name}: {error}",
+    "generation_error": "Erro ao gerar prompt para tabela {table_name}: {error}",
+    "error_generating": "Erro ao gerar schema"
   },
   "complexity_levels": {
     "basic": "Simplicidade, recursos básicos",
@@ -154,28 +157,8 @@
     "notification_received": "Notificação initialized recebida"
   },
   "prompts": {
-    "available": "Prompts especialistas disponíveis",
-    "firebird_expert": {
-      "name": "firebird_expert",
-      "description": "Assistente especialista em Firebird com conhecimento profundo do SGBD",
-      "operation_type": "Tipo de operação SQL (select, insert, update, delete, ddl, admin)",
-      "table_context": "Nome da tabela ou contexto específico",
-      "complexity_level": "Nível de complexidade desejado (basic, intermediate, advanced)"
-    },
-    "firebird_performance": {
-      "name": "firebird_performance", 
-      "description": "Especialista em otimização e performance para Firebird",
-      "query_type": "Tipo de consulta a otimizar (simple, complex, reporting, oltp)",
-      "focus_area": "Área de foco (indexes, joins, transactions, memory)"
-    },
-    "firebird_architecture": {
-      "name": "firebird_architecture",
-      "description": "Especialista em arquitetura e administração Firebird", 
-      "topic": "Tópico de interesse (backup, security, monitoring, maintenance)",
-      "version_focus": "Versão específica do Firebird (2.5, 3.0, 4.0, 5.0)"
-    },
+    "available": "Prompts de schema de tabelas disponíveis",
     "unknown_prompt": "Prompt desconhecido",
-    "error_generating": "Erro ao gerar prompt",
     "manager": {
       "system_status": "Sistema de prompt padrão",
       "enabled": "habilitado",
