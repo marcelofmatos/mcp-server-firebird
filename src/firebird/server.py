@@ -321,122 +321,165 @@ class FirebirdMCPServer:
             )
             cursor = conn.cursor()
             
-            # Get columns with data types
+            # Get columns with basic data types (simplified and robust query)
             cursor.execute("""
                 SELECT 
                     TRIM(rf.RDB$FIELD_NAME) as column_name,
                     CASE f.RDB$FIELD_TYPE
-                        WHEN 7 THEN 'smallint'
-                        WHEN 8 THEN 'integer'
-                        WHEN 10 THEN 'float'
-                        WHEN 12 THEN 'date'
-                        WHEN 13 THEN 'time'
-                        WHEN 14 THEN 'char('
-                        WHEN 16 THEN 'bigint'
-                        WHEN 27 THEN 'double precision'
-                        WHEN 35 THEN 'timestamp'
-                        WHEN 37 THEN 'varchar('
-                        WHEN 261 THEN 'blob'
-                        ELSE 'unknown'
-                    END ||
-                    CASE 
-                        WHEN f.RDB$FIELD_TYPE IN (14, 37) THEN f.RDB$FIELD_LENGTH || ')'
-                        WHEN f.RDB$FIELD_TYPE = 16 AND f.RDB$FIELD_SUB_TYPE = 1 THEN 'numeric(' || f.RDB$FIELD_PRECISION || ',' || (-f.RDB$FIELD_SCALE) || ')'
-                        WHEN f.RDB$FIELD_TYPE = 16 AND f.RDB$FIELD_SUB_TYPE = 2 THEN 'decimal(' || f.RDB$FIELD_PRECISION || ',' || (-f.RDB$FIELD_SCALE) || ')'
-                        ELSE ''
-                    END as data_type,
+                        WHEN 7 THEN 'SMALLINT'
+                        WHEN 8 THEN 'INTEGER'
+                        WHEN 10 THEN 'FLOAT'
+                        WHEN 12 THEN 'DATE'
+                        WHEN 13 THEN 'TIME'
+                        WHEN 14 THEN 'CHAR'
+                        WHEN 16 THEN 'BIGINT'
+                        WHEN 27 THEN 'DOUBLE PRECISION'
+                        WHEN 35 THEN 'TIMESTAMP'
+                        WHEN 37 THEN 'VARCHAR'
+                        WHEN 261 THEN 'BLOB'
+                        ELSE 'UNKNOWN'
+                    END as base_type,
+                    f.RDB$FIELD_LENGTH as field_length,
+                    f.RDB$FIELD_SCALE as field_scale,
                     CASE WHEN rf.RDB$NULL_FLAG IS NULL THEN 'YES' ELSE 'NO' END as nullable,
                     TRIM(rf.RDB$DEFAULT_SOURCE) as default_value,
-                    rf.RDB$FIELD_POSITION as position
+                    rf.RDB$FIELD_POSITION as "position"
                 FROM RDB$RELATION_FIELDS rf
                 JOIN RDB$FIELDS f ON rf.RDB$FIELD_SOURCE = f.RDB$FIELD_NAME
                 WHERE rf.RDB$RELATION_NAME = ?
                 ORDER BY rf.RDB$FIELD_POSITION
             """, [table_name.upper()])
             
-            columns = cursor.fetchall()
+            columns_raw = cursor.fetchall()
             
-            # Get primary key
-            cursor.execute("""
-                SELECT TRIM(s.RDB$FIELD_NAME) as column_name
-                FROM RDB$INDEX_SEGMENTS s
-                JOIN RDB$INDICES i ON s.RDB$INDEX_NAME = i.RDB$INDEX_NAME
-                JOIN RDB$RELATION_CONSTRAINTS rc ON i.RDB$INDEX_NAME = rc.RDB$INDEX_NAME
-                WHERE rc.RDB$RELATION_NAME = ?
-                AND rc.RDB$CONSTRAINT_TYPE = 'PRIMARY KEY'
-                ORDER BY s.RDB$FIELD_POSITION
-            """, [table_name.upper()])
+            # Get primary key with error handling
+            primary_keys = []
+            try:
+                cursor.execute("""
+                    SELECT TRIM(s.RDB$FIELD_NAME) as column_name
+                    FROM RDB$INDEX_SEGMENTS s
+                    JOIN RDB$INDICES i ON s.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+                    JOIN RDB$RELATION_CONSTRAINTS rc ON i.RDB$INDEX_NAME = rc.RDB$INDEX_NAME
+                    WHERE rc.RDB$RELATION_NAME = ?
+                    AND rc.RDB$CONSTRAINT_TYPE = 'PRIMARY KEY'
+                    ORDER BY s.RDB$FIELD_POSITION
+                """, [table_name.upper()])
+                
+                primary_keys = [row[0] for row in cursor.fetchall()]
+            except Exception as e:
+                log(f"⚠️ Warning getting primary keys for {table_name}: {e}")
             
-            primary_keys = [row[0] for row in cursor.fetchall()]
+            # Get foreign keys with error handling
+            foreign_keys = []
+            try:
+                cursor.execute("""
+                    SELECT 
+                        TRIM(rc.RDB$CONSTRAINT_NAME) as constraint_name,
+                        TRIM(s.RDB$FIELD_NAME) as column_name,
+                        TRIM(rc2.RDB$RELATION_NAME) as referenced_table,
+                        TRIM(s2.RDB$FIELD_NAME) as referenced_column
+                    FROM RDB$RELATION_CONSTRAINTS rc
+                    JOIN RDB$INDICES i ON rc.RDB$INDEX_NAME = i.RDB$INDEX_NAME
+                    JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
+                    JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME
+                    JOIN RDB$RELATION_CONSTRAINTS rc2 ON refc.RDB$CONST_NAME_UQ = rc2.RDB$CONSTRAINT_NAME
+                    JOIN RDB$INDICES i2 ON rc2.RDB$INDEX_NAME = i2.RDB$INDEX_NAME
+                    JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME
+                    WHERE rc.RDB$RELATION_NAME = ?
+                    AND rc.RDB$CONSTRAINT_TYPE = 'FOREIGN KEY'
+                    AND s.RDB$FIELD_POSITION = s2.RDB$FIELD_POSITION
+                    ORDER BY rc.RDB$CONSTRAINT_NAME, s.RDB$FIELD_POSITION
+                """, [table_name.upper()])
+                
+                foreign_keys = cursor.fetchall()
+            except Exception as e:
+                log(f"⚠️ Warning getting foreign keys for {table_name}: {e}")
             
-            # Get foreign keys
-            cursor.execute("""
-                SELECT 
-                    TRIM(rc.RDB$CONSTRAINT_NAME) as constraint_name,
-                    TRIM(s.RDB$FIELD_NAME) as column_name,
-                    TRIM(rc2.RDB$RELATION_NAME) as referenced_table,
-                    TRIM(s2.RDB$FIELD_NAME) as referenced_column
-                FROM RDB$RELATION_CONSTRAINTS rc
-                JOIN RDB$INDICES i ON rc.RDB$INDEX_NAME = i.RDB$INDEX_NAME
-                JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
-                JOIN RDB$REF_CONSTRAINTS refc ON rc.RDB$CONSTRAINT_NAME = refc.RDB$CONSTRAINT_NAME
-                JOIN RDB$RELATION_CONSTRAINTS rc2 ON refc.RDB$CONST_NAME_UQ = rc2.RDB$CONSTRAINT_NAME
-                JOIN RDB$INDICES i2 ON rc2.RDB$INDEX_NAME = i2.RDB$INDEX_NAME
-                JOIN RDB$INDEX_SEGMENTS s2 ON i2.RDB$INDEX_NAME = s2.RDB$INDEX_NAME
-                WHERE rc.RDB$RELATION_NAME = ?
-                AND rc.RDB$CONSTRAINT_TYPE = 'FOREIGN KEY'
-                AND s.RDB$FIELD_POSITION = s2.RDB$FIELD_POSITION
-                ORDER BY rc.RDB$CONSTRAINT_NAME, s.RDB$FIELD_POSITION
-            """, [table_name.upper()])
-            
-            foreign_keys = cursor.fetchall()
-            
-            # Get indexes
-            cursor.execute("""
-                SELECT 
-                    TRIM(i.RDB$INDEX_NAME) as index_name,
-                    TRIM(s.RDB$FIELD_NAME) as column_name,
-                    i.RDB$UNIQUE_FLAG as is_unique
-                FROM RDB$INDICES i
-                JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
-                WHERE i.RDB$RELATION_NAME = ?
-                AND i.RDB$SYSTEM_FLAG = 0
-                ORDER BY i.RDB$INDEX_NAME, s.RDB$FIELD_POSITION
-            """, [table_name.upper()])
-            
-            indexes = cursor.fetchall()
+            # Get indexes with error handling
+            indexes = []
+            try:
+                cursor.execute("""
+                    SELECT 
+                        TRIM(i.RDB$INDEX_NAME) as index_name,
+                        TRIM(s.RDB$FIELD_NAME) as column_name,
+                        i.RDB$UNIQUE_FLAG as is_unique
+                    FROM RDB$INDICES i
+                    JOIN RDB$INDEX_SEGMENTS s ON i.RDB$INDEX_NAME = s.RDB$INDEX_NAME
+                    WHERE i.RDB$RELATION_NAME = ?
+                    AND i.RDB$SYSTEM_FLAG = 0
+                    ORDER BY i.RDB$INDEX_NAME, s.RDB$FIELD_POSITION
+                """, [table_name.upper()])
+                
+                indexes = cursor.fetchall()
+            except Exception as e:
+                log(f"⚠️ Warning getting indexes for {table_name}: {e}")
             
             conn.close()
             
-            # Format columns
+            # Format columns with proper data type formatting
             formatted_columns = []
-            for col in columns:
-                formatted_columns.append({
-                    "column_name": col[0],
-                    "data_type": col[1],
-                    "nullable": col[2],
-                    "default_value": col[3],
-                    "position": col[4]
-                })
+            for col in columns_raw:
+                try:
+                    column_name, base_type, field_length, field_scale, nullable, default_value, position = col
+                    
+                    # Format data type with length/precision
+                    if base_type in ['CHAR', 'VARCHAR'] and field_length and field_length > 0:
+                        data_type = f"{base_type}({field_length})"
+                    elif base_type == 'BIGINT' and field_scale and field_scale < 0:
+                        # This might be a NUMERIC/DECIMAL field
+                        precision = abs(field_scale)
+                        data_type = f"NUMERIC(18,{precision})"
+                    elif base_type == 'INTEGER' and field_scale and field_scale < 0:
+                        # This might be a smaller NUMERIC field
+                        precision = abs(field_scale)
+                        data_type = f"NUMERIC(10,{precision})"
+                    else:
+                        data_type = base_type
+                    
+                    formatted_columns.append({
+                        "column_name": column_name,
+                        "data_type": data_type,
+                        "nullable": nullable,
+                        "default_value": default_value,
+                        "position": position
+                    })
+                except Exception as e:
+                    log(f"⚠️ Warning formatting column {col}: {e}")
+                    # Fallback formatting
+                    formatted_columns.append({
+                        "column_name": col[0] if len(col) > 0 else "UNKNOWN",
+                        "data_type": col[1] if len(col) > 1 else "UNKNOWN",
+                        "nullable": col[4] if len(col) > 4 else "YES",
+                        "default_value": col[5] if len(col) > 5 else None,
+                        "position": col[6] if len(col) > 6 else 0
+                    })
             
             # Format foreign keys
             formatted_fks = []
             for fk in foreign_keys:
-                formatted_fks.append({
-                    "constraint_name": fk[0],
-                    "column_name": fk[1],
-                    "referenced_table": fk[2],
-                    "referenced_column": fk[3]
-                })
+                try:
+                    formatted_fks.append({
+                        "constraint_name": fk[0],
+                        "column_name": fk[1],
+                        "referenced_table": fk[2],
+                        "referenced_column": fk[3]
+                    })
+                except Exception as e:
+                    log(f"⚠️ Warning formatting foreign key {fk}: {e}")
             
             # Format indexes
             formatted_indexes = []
             for idx in indexes:
-                formatted_indexes.append({
-                    "index_name": idx[0],
-                    "column_name": idx[1],
-                    "is_unique": idx[2] == 1
-                })
+                try:
+                    formatted_indexes.append({
+                        "index_name": idx[0],
+                        "column_name": idx[1],
+                        "is_unique": idx[2] == 1 if idx[2] is not None else False
+                    })
+                except Exception as e:
+                    log(f"⚠️ Warning formatting index {idx}: {e}")
+            
+            log(f"✅ Successfully retrieved schema for {table_name}: {len(formatted_columns)} columns, {len(primary_keys)} PKs, {len(formatted_fks)} FKs, {len(formatted_indexes)} indexes")
             
             return {
                 "success": True,
@@ -448,6 +491,7 @@ class FirebirdMCPServer:
             }
             
         except Exception as e:
+            log(f"❌ Error getting schema for table {table_name}: {e}")
             return {
                 "success": False,
                 "error": str(e),
