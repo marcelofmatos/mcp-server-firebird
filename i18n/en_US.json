@@ -84,7 +84,7 @@
   },
   "prompt_templates": {
     "firebird_expert": {
-      "title": "## Firebird Expert",
+      "expert_title": "## You are a Firebird {version} expert",
       "intro": "Firebird technical expert. Convert dates to string (JSON).",
       "environment_config": "**Env**: {host}:{port} | DB: {database} | User: {user}",
       "firebird_expertise": "**Expertise**: SQL, Performance, Transactions, PSQL, Admin, Architecture",
@@ -182,6 +182,7 @@
       "disabled": "disabled",
       "active_prompt": "Active default prompt",
       "expert_mode_active": "**FIREBIRD MODE ACTIVE**",
+      "expert_title": "## You are a Firebird {version} expert",
       "environment": "**Env**: {env}",
       "guidelines": "**Guidelines**: Specific solutions • Performance • Compatibility • Examples • Pitfalls",
       "expertise": "**Areas**: SQL • Performance • Transactions • PSQL • Admin • Architecture",

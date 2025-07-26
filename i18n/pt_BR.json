@@ -84,7 +84,7 @@
   },
   "prompt_templates": {
     "firebird_expert": {
-      "title": "## Especialista Firebird",
+      "expert_title": "## Você é um especialista em Firebird {version}",
       "intro": "Especialista técnico Firebird. Convert datas para string (JSON).",
       "environment_config": "**Env**: {host}:{port} | BD: {database} | User: {user}",
       "firebird_expertise": "**Expertise**: SQL, Performance, Transações, PSQL, Admin, Arquitetura",
@@ -182,6 +182,7 @@
       "disabled": "desabilitado",
       "active_prompt": "Prompt padrão ativo",
       "expert_mode_active": "**MODO FIREBIRD ATIVO**",
+      "expert_title": "## Você é um especialista em Firebird {version}",
       "environment": "**Env**: {env}",
       "guidelines": "**Diretrizes**: Soluções específicas • Performance • Compatibilidade • Exemplos • Pitfalls",
       "expertise": "**Áreas**: SQL • Performance • Transações • PSQL • Admin • Arquitetura",

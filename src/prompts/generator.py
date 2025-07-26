@@ -23,11 +23,23 @@ class PromptGenerator:
         else:
             raise ValueError(f"Unknown prompt: {prompt_name}")
     
+    def _get_firebird_version(self) -> str:
+        """Obter versão Firebird do servidor conectado."""
+        if self.firebird_server:
+            try:
+                result = self.firebird_server.test_connection()
+                if result.get("connected") and result.get("version"):
+                    return result["version"]
+            except:
+                pass
+        return "5.0+"  # fallback
+    
     def _generate_expert_prompt(self, args: Dict) -> str:
         """Compact expert prompt (~200 tokens vs 2000+)."""
         operation = args.get("operation_type", "query")
         level = args.get("complexity_level", "intermediate")
         table_ctx = args.get("table_context", "")
+        version = self._get_firebird_version()
         
         # Get minimal table info
         tables_info = ""
@@ -44,7 +56,7 @@ class PromptGenerator:
         
         template = self.i18n.get('prompt_templates.firebird_expert')
         
-        return f"""{template['title']}
+        return f"""{template['expert_title'].format(version=version)}
 
 {template['intro']}
 
