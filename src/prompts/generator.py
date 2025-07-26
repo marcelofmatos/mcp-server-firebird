@@ -32,7 +32,7 @@ class PromptGenerator:
             prompts = []
             for table_name in tables_result["tables"]:
                 prompts.append({
-                    "name": f"{table_name}_schema",
+                    "name": f"{table_name} schema",
                     "description": self.i18n.get('table_schema.description', table_name=table_name),
                     "title": f"{table_name} schema"
                 })
