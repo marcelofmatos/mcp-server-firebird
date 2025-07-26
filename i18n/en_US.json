@@ -101,7 +101,7 @@
     "unique": "unique",
     "non_unique": "non-unique",
     "usage_guidance": "## Usage Guidance",
-    "select_guidance": "For SELECT queries, use appropriate indexes for better performance",
+    "select_guidance": "For SELECT queries, use appropriate indexes for better performance. Cast date fields to string to avoid serialization errors.",
     "join_guidance": "For JOINs, utilize the defined foreign keys",
     "insert_guidance": "For INSERTs, respect primary and foreign key constraints",
     "update_guidance": "For UPDATEs, always use WHERE with indexed fields",

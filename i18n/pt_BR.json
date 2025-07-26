@@ -101,7 +101,7 @@
     "unique": "único",
     "non_unique": "não único",
     "usage_guidance": "## Orientações de Uso",
-    "select_guidance": "Para consultas SELECT, use os índices apropriados para melhor performance",
+    "select_guidance": "Para consultas SELECT, use os índices apropriados para melhor performance. Faça CAST de campos de data para string evitando o erro de serialização.",
     "join_guidance": "Para JOINs, utilize as chaves estrangeiras definidas",
     "insert_guidance": "Para INSERTs, respeite as constraints de chave primária e estrangeira",
     "update_guidance": "Para UPDATEs, sempre use WHERE com campos indexados",
